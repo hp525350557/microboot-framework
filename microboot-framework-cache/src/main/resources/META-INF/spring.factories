@@ -1,0 +1,3 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+org.microboot.cache.config.CacheConfig,\
+org.microboot.cache.config.MemcachedConfig

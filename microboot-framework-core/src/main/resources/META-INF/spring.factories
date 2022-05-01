@@ -1,0 +1,6 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+org.microboot.core.config.CoreConfig
+
+org.springframework.context.ApplicationListener=\
+org.microboot.core.listener.MicrobootEnvironmentApplicationListener,\
+org.microboot.core.listener.MicrobootLoggingApplicationListener
