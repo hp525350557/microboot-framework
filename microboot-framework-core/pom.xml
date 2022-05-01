@@ -59,12 +59,6 @@
             <groupId>net.java.dev.jna</groupId>
             <artifactId>jna</artifactId>
         </dependency>
-        <!--lombok 插件 @Setter，@Getter等注解-->
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <scope>provided</scope>
-        </dependency>
         <!--http client-->
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
