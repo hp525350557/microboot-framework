@@ -3,9 +3,9 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>microboot-framework</artifactId>
         <groupId>org.microbootframework</groupId>
-        <version>0.0.1-SNAPSHOT</version>
+        <artifactId>microboot-framework</artifactId>
+        <version>master-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -15,12 +15,12 @@
         <dependency>
             <groupId>org.microbootframework</groupId>
             <artifactId>microboot-framework-core</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <version>master-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.microbootframework</groupId>
             <artifactId>microboot-framework-web</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <version>master-SNAPSHOT</version>
         </dependency>
     </dependencies>
 
