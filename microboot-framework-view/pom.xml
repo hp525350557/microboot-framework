@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.microbootframework</groupId>
         <artifactId>microboot-framework</artifactId>
-        <version>test-SNAPSHOT</version>
+        <version>master-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -15,7 +15,7 @@
         <dependency>
             <groupId>org.microbootframework</groupId>
             <artifactId>microboot-framework-web</artifactId>
-            <version>test-SNAPSHOT</version>
+            <version>master-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
