@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.microbootframework</groupId>
     <artifactId>microboot-framework</artifactId>
-    <version>master-SNAPSHOT</version>
+    <version>test-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <properties>
