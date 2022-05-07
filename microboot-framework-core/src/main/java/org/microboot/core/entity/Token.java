@@ -99,12 +99,27 @@ public class Token implements Serializable {
             return this;
         }
 
+        /**
+         * 以当前时间作为开始时间，计算绝对失效时间
+         *
+         * @return
+         */
         public Builder generate() {
+            return this.generate(System.currentTimeMillis());
+        }
+
+        /**
+         * 以传入时间作为开始时间，计算相对失效时间
+         *
+         * @param startTimeMillis
+         * @return
+         */
+        public Builder generate(long startTimeMillis) {
             if (this.token.expireTime == null) {
                 if (this.token.expire == -1) {
                     this.token.expireTime = Long.MAX_VALUE;
                 } else {
-                    this.token.expireTime = System.currentTimeMillis() + this.token.expire;
+                    this.token.expireTime = startTimeMillis + this.token.expire;
                 }
             }
             return this;
