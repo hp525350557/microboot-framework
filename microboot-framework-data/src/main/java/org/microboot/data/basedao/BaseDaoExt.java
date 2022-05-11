@@ -17,6 +17,7 @@ import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
+import org.springframework.util.Assert;
 
 import java.sql.SQLException;
 import java.util.Map;
@@ -69,7 +70,7 @@ public abstract class BaseDaoExt extends TransmittableThreadLocal<NamedParameter
      */
     public <T> T query(String templateName, String paramKey, Object paramValue, ResultSetExtractor<T> rse) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -116,7 +117,7 @@ public abstract class BaseDaoExt extends TransmittableThreadLocal<NamedParameter
      */
     public <T> T queryBySql(String sql, String paramKey, Object paramValue, ResultSetExtractor<T> rse) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -166,7 +167,7 @@ public abstract class BaseDaoExt extends TransmittableThreadLocal<NamedParameter
      */
     public <T> T queryWithSlaves(String templateName, String paramKey, Object paramValue, String dataBaseName, ResultSetExtractor<T> rse) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -216,7 +217,7 @@ public abstract class BaseDaoExt extends TransmittableThreadLocal<NamedParameter
      */
     public <T> T queryBySqlWithSlaves(String sql, String paramKey, Object paramValue, String dataBaseName, ResultSetExtractor<T> rse) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -266,7 +267,7 @@ public abstract class BaseDaoExt extends TransmittableThreadLocal<NamedParameter
      */
     public <T> T queryWithOthers(String templateName, String paramKey, Object paramValue, String dataBaseName, ResultSetExtractor<T> rse) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -316,7 +317,7 @@ public abstract class BaseDaoExt extends TransmittableThreadLocal<NamedParameter
      */
     public <T> T queryBySqlWithOthers(String sql, String paramKey, Object paramValue, String dataBaseName, ResultSetExtractor<T> rse) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -357,7 +358,7 @@ public abstract class BaseDaoExt extends TransmittableThreadLocal<NamedParameter
      */
     public SqlRowSet queryForSqlRowSet(String templateName, String paramKey, Object paramValue) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -398,7 +399,7 @@ public abstract class BaseDaoExt extends TransmittableThreadLocal<NamedParameter
      */
     public SqlRowSet queryForSqlRowSetBySql(String sql, String paramKey, Object paramValue) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -442,7 +443,7 @@ public abstract class BaseDaoExt extends TransmittableThreadLocal<NamedParameter
      */
     public SqlRowSet queryForSqlRowSetWithSlaves(String templateName, String paramKey, Object paramValue, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -486,7 +487,7 @@ public abstract class BaseDaoExt extends TransmittableThreadLocal<NamedParameter
      */
     public SqlRowSet queryForSqlRowSetBySqlWithSlaves(String sql, String paramKey, Object paramValue, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -530,7 +531,7 @@ public abstract class BaseDaoExt extends TransmittableThreadLocal<NamedParameter
      */
     public SqlRowSet queryForSqlRowSetWithOthers(String templateName, String paramKey, Object paramValue, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -574,7 +575,7 @@ public abstract class BaseDaoExt extends TransmittableThreadLocal<NamedParameter
      */
     public SqlRowSet queryForSqlRowSetBySqlWithOthers(String sql, String paramKey, Object paramValue, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -727,6 +728,7 @@ public abstract class BaseDaoExt extends TransmittableThreadLocal<NamedParameter
      * @throws Exception
      */
     private int execute(String templateName, MapSqlParameterSource parameterSource, NamedParameterJdbcTemplate namedParameterJdbcTemplate) throws Exception {
+        Assert.notNull(parameterSource, "MapSqlParameterSource must not be null");
         String sql = ApplicationContextHolder.getBean(TemplateResolver.class).processTemplate(templateName, parameterSource.getValues());
         return this.executeBySql(sql, parameterSource, namedParameterJdbcTemplate);
     }
@@ -792,7 +794,7 @@ public abstract class BaseDaoExt extends TransmittableThreadLocal<NamedParameter
      */
     protected NamedParameterJdbcTemplate getNamedParameterJdbcTemplateWithOthers(String dataBaseName) throws Exception {
         if (StringUtils.isBlank(dataBaseName)) {
-            throw new IllegalArgumentException("<dataBaseName> cannot be null");
+            throw new IllegalArgumentException("dataBaseName must not be null");
         }
         Map<String, NamedParameterJdbcTemplate> namedParameterJdbcTemplateMap = DataContainer.othersMap;
         NamedParameterJdbcTemplate namedParameterJdbcTemplate = namedParameterJdbcTemplateMap.getOrDefault(dataBaseName, null);

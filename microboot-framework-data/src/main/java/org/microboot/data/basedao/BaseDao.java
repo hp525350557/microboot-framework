@@ -61,7 +61,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public List<Map<String, Object>> queryForList(String templateName, String paramKey, Object paramValue) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -108,7 +108,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public <T> List<T> queryForList(String templateName, String paramKey, Object paramValue, Class<T> clazz) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -149,7 +149,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public Map<String, Object> queryForMap(String templateName, String paramKey, Object paramValue) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -196,7 +196,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public <T> T queryForObject(String templateName, String paramKey, Object paramValue, Class<T> clazz) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -264,7 +264,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public List<Map<String, Object>> queryForListBySql(String sql, String paramKey, Object paramValue) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -311,7 +311,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public <T> List<T> queryForListBySql(String sql, String paramKey, Object paramValue, Class<T> clazz) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -352,7 +352,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public Map<String, Object> queryForMapBySql(String sql, String paramKey, Object paramValue) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -399,7 +399,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public <T> T queryForObjectBySql(String sql, String paramKey, Object paramValue, Class<T> clazz) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -470,7 +470,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public List<Map<String, Object>> queryForListWithSlaves(String templateName, String paramKey, Object paramValue, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -520,7 +520,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public <T> List<T> queryForListWithSlaves(String templateName, String paramKey, Object paramValue, Class<T> clazz, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -564,7 +564,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public Map<String, Object> queryForMapWithSlaves(String templateName, String paramKey, Object paramValue, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -614,7 +614,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public <T> T queryForObjectWithSlaves(String templateName, String paramKey, Object paramValue, Class<T> clazz, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -687,7 +687,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public List<Map<String, Object>> queryForListBySqlWithSlaves(String sql, String paramKey, Object paramValue, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -737,7 +737,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public <T> List<T> queryForListBySqlWithSlaves(String sql, String paramKey, Object paramValue, Class<T> clazz, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -781,7 +781,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public Map<String, Object> queryForMapBySqlWithSlaves(String sql, String paramKey, Object paramValue, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -831,7 +831,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public <T> T queryForObjectBySqlWithSlaves(String sql, String paramKey, Object paramValue, Class<T> clazz, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -904,7 +904,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public List<Map<String, Object>> queryForListWithOthers(String templateName, String paramKey, Object paramValue, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -954,7 +954,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public <T> List<T> queryForListWithOthers(String templateName, String paramKey, Object paramValue, Class<T> clazz, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -998,7 +998,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public Map<String, Object> queryForMapWithOthers(String templateName, String paramKey, Object paramValue, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -1048,7 +1048,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public <T> T queryForObjectWithOthers(String templateName, String paramKey, Object paramValue, Class<T> clazz, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -1121,7 +1121,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public List<Map<String, Object>> queryForListBySqlWithOthers(String sql, String paramKey, Object paramValue, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -1171,7 +1171,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public <T> List<T> queryForListBySqlWithOthers(String sql, String paramKey, Object paramValue, Class<T> clazz, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -1215,7 +1215,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public Map<String, Object> queryForMapBySqlWithOthers(String sql, String paramKey, Object paramValue, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -1265,7 +1265,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public <T> T queryForObjectBySqlWithOthers(String sql, String paramKey, Object paramValue, Class<T> clazz, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -1335,7 +1335,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public int execute(String templateName, String paramKey, Object paramValue) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -1387,7 +1387,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public int executeBySql(String sql, String paramKey, Object paramValue) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -1442,7 +1442,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public int executeWithSlaves(String templateName, String paramKey, Object paramValue, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -1498,7 +1498,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public int executeBySqlWithSlaves(String sql, String paramKey, Object paramValue, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -1555,7 +1555,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public int executeWithOthers(String templateName, String paramKey, Object paramValue, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
@@ -1611,7 +1611,7 @@ public class BaseDao extends BaseDaoExt {
      */
     public int executeBySqlWithOthers(String sql, String paramKey, Object paramValue, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("<paramKey> cannot be null");
+            throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
