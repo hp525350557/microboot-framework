@@ -1886,6 +1886,23 @@ public class BaseDao extends TransmittableThreadLocal<NamedParameterJdbcTemplate
     }
 
     /**
+     * @param namedParameterJdbcTemplates
+     * @return
+     */
+    protected NamedParameterJdbcTemplate getOrCreate(NamedParameterJdbcTemplate... namedParameterJdbcTemplates) {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.get();
+        if (namedParameterJdbcTemplate != null) {
+            logger.info("读Thread：" + Thread.currentThread() + "=======>" + namedParameterJdbcTemplate);
+            return namedParameterJdbcTemplate;
+        }
+        if (ArrayUtils.isNotEmpty(namedParameterJdbcTemplates)) {
+            this.set(namedParameterJdbcTemplates[0]);
+            logger.info("写Thread：" + Thread.currentThread() + "=======>" + namedParameterJdbcTemplates[0]);
+        }
+        return this.get();
+    }
+
+    /**
      * @param dataBaseName（从库）
      * @return
      * @throws Exception
@@ -1964,22 +1981,5 @@ public class BaseDao extends TransmittableThreadLocal<NamedParameterJdbcTemplate
             }
         }
         return namedParameterJdbcTemplate;
-    }
-
-    /**
-     * @param namedParameterJdbcTemplates
-     * @return
-     */
-    private NamedParameterJdbcTemplate getOrCreate(NamedParameterJdbcTemplate... namedParameterJdbcTemplates) {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.get();
-        if (namedParameterJdbcTemplate != null) {
-            logger.info("读Thread：" + Thread.currentThread() + "=======>" + namedParameterJdbcTemplate);
-            return namedParameterJdbcTemplate;
-        }
-        if (ArrayUtils.isNotEmpty(namedParameterJdbcTemplates)) {
-            this.set(namedParameterJdbcTemplates[0]);
-            logger.info("写Thread：" + Thread.currentThread() + "=======>" + namedParameterJdbcTemplates[0]);
-        }
-        return this.get();
     }
 }

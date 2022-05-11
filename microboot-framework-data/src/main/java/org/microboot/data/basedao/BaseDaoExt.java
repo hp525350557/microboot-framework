@@ -5,11 +5,13 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.microboot.core.bean.ApplicationContextHolder;
+import org.microboot.core.constant.Constant;
 import org.microboot.core.utils.ConvertUtils;
 import org.microboot.core.utils.LoggerUtils;
 import org.microboot.data.resolver.TemplateResolver;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.ResultSetExtractor;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 
@@ -576,6 +578,76 @@ public class BaseDaoExt extends BaseDao {
 
     /**
      * @param templateName
+     * @param parameterSource
+     * @return
+     * @throws Exception
+     */
+    public int execute(String templateName, MapSqlParameterSource parameterSource) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.MASTER_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
+        return this.execute(templateName, parameterSource, namedParameterJdbcTemplate);
+    }
+
+    /**
+     * @param sql
+     * @param parameterSource
+     * @return
+     * @throws Exception
+     */
+    public int executeBySql(String sql, MapSqlParameterSource parameterSource) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.MASTER_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
+        return this.executeBySql(sql, parameterSource, namedParameterJdbcTemplate);
+    }
+
+    /**
+     * @param templateName
+     * @param parameterSource
+     * @param dataBaseName
+     * @return
+     * @throws Exception
+     */
+    public int executeWithSlaves(String templateName, MapSqlParameterSource parameterSource, String dataBaseName) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves(dataBaseName);
+        return this.execute(templateName, parameterSource, namedParameterJdbcTemplate);
+    }
+
+    /**
+     * @param sql
+     * @param parameterSource
+     * @param dataBaseName
+     * @return
+     * @throws Exception
+     */
+    public int executeBySqlWithSlaves(String sql, MapSqlParameterSource parameterSource, String dataBaseName) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves(dataBaseName);
+        return this.executeBySql(sql, parameterSource, namedParameterJdbcTemplate);
+    }
+
+    /**
+     * @param templateName
+     * @param parameterSource
+     * @param dataBaseName
+     * @return
+     * @throws Exception
+     */
+    public int executeWithOthers(String templateName, MapSqlParameterSource parameterSource, String dataBaseName) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithOthers(dataBaseName);
+        return this.execute(templateName, parameterSource, namedParameterJdbcTemplate);
+    }
+
+    /**
+     * @param sql
+     * @param parameterSource
+     * @param dataBaseName
+     * @return
+     * @throws Exception
+     */
+    public int executeBySqlWithOthers(String sql, MapSqlParameterSource parameterSource, String dataBaseName) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithOthers(dataBaseName);
+        return this.executeBySql(sql, parameterSource, namedParameterJdbcTemplate);
+    }
+
+    /**
+     * @param templateName
      * @param parameters
      * @param namedParameterJdbcTemplate
      * @param rse
@@ -640,5 +712,30 @@ public class BaseDaoExt extends BaseDao {
             LoggerUtils.warn(logger, e);
             return null;
         }
+    }
+
+    /**
+     * @param templateName
+     * @param parameterSource
+     * @param namedParameterJdbcTemplate
+     * @return
+     * @throws Exception
+     */
+    private int execute(String templateName, MapSqlParameterSource parameterSource, NamedParameterJdbcTemplate namedParameterJdbcTemplate) throws Exception {
+        String sql = ApplicationContextHolder.getBean(TemplateResolver.class).processTemplate(templateName, parameterSource.getValues());
+        return this.executeBySql(sql, parameterSource, namedParameterJdbcTemplate);
+    }
+
+    /**
+     * @param sql
+     * @param parameterSource
+     * @param namedParameterJdbcTemplate
+     * @return
+     * @throws Exception
+     */
+    private int executeBySql(String sql, MapSqlParameterSource parameterSource, NamedParameterJdbcTemplate namedParameterJdbcTemplate) throws Exception {
+        logger.info(sql + " -> " + ConvertUtils.object2Json(parameterSource));
+        this.getOrCreate(namedParameterJdbcTemplate);
+        return namedParameterJdbcTemplate.update(sql, parameterSource);
     }
 }
