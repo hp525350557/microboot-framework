@@ -1,6 +1,8 @@
 package org.microboot.data.basedao;
 
+import com.alibaba.ttl.TransmittableThreadLocal;
 import com.google.common.collect.Maps;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -8,6 +10,7 @@ import org.microboot.core.bean.ApplicationContextHolder;
 import org.microboot.core.constant.Constant;
 import org.microboot.core.utils.ConvertUtils;
 import org.microboot.core.utils.LoggerUtils;
+import org.microboot.data.container.DataContainer;
 import org.microboot.data.resolver.TemplateResolver;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.ResultSetExtractor;
@@ -15,12 +18,14 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 
+import java.sql.SQLException;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * @author 胡鹏
  */
-public class BaseDaoExt extends BaseDao {
+public abstract class BaseDaoExt extends TransmittableThreadLocal<NamedParameterJdbcTemplate> {
 
     private final Logger logger = LogManager.getLogger(this.getClass());
 
@@ -737,5 +742,103 @@ public class BaseDaoExt extends BaseDao {
         logger.info(sql + " -> " + ConvertUtils.object2Json(parameterSource));
         this.getOrCreate(namedParameterJdbcTemplate);
         return namedParameterJdbcTemplate.update(sql, parameterSource);
+    }
+
+    /**
+     * @param namedParameterJdbcTemplates
+     * @return
+     */
+    protected NamedParameterJdbcTemplate getOrCreate(NamedParameterJdbcTemplate... namedParameterJdbcTemplates) {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.get();
+        if (namedParameterJdbcTemplate != null) {
+            logger.info("读Thread：" + Thread.currentThread() + "=======>" + namedParameterJdbcTemplate);
+            return namedParameterJdbcTemplate;
+        }
+        if (ArrayUtils.isNotEmpty(namedParameterJdbcTemplates)) {
+            this.set(namedParameterJdbcTemplates[0]);
+            logger.info("写Thread：" + Thread.currentThread() + "=======>" + namedParameterJdbcTemplates[0]);
+        }
+        return this.get();
+    }
+
+    /**
+     * @param dataBaseName（从库）
+     * @return
+     * @throws Exception
+     */
+    protected NamedParameterJdbcTemplate getNamedParameterJdbcTemplateWithSlaves(String... dataBaseName) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+        Map<String, NamedParameterJdbcTemplate> namedParameterJdbcTemplateMap = DataContainer.slavesMap;
+        if (ArrayUtils.isNotEmpty(dataBaseName)) {
+            String name = dataBaseName[0];
+            namedParameterJdbcTemplate = namedParameterJdbcTemplateMap.getOrDefault(name, null);
+        } else {
+            namedParameterJdbcTemplate = this.getOrCreate();
+            if (namedParameterJdbcTemplate != null) {
+                return namedParameterJdbcTemplate;
+            }
+            namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplate(namedParameterJdbcTemplateMap);
+        }
+        if (namedParameterJdbcTemplate == null) {
+            throw new SQLException("no available connections were found");
+        }
+        return namedParameterJdbcTemplate;
+    }
+
+    /**
+     * @param dataBaseName（其他库）
+     * @return
+     * @throws Exception
+     */
+    protected NamedParameterJdbcTemplate getNamedParameterJdbcTemplateWithOthers(String dataBaseName) throws Exception {
+        if (StringUtils.isBlank(dataBaseName)) {
+            throw new IllegalArgumentException("<dataBaseName> cannot be null");
+        }
+        Map<String, NamedParameterJdbcTemplate> namedParameterJdbcTemplateMap = DataContainer.othersMap;
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = namedParameterJdbcTemplateMap.getOrDefault(dataBaseName, null);
+        if (namedParameterJdbcTemplate == null) {
+            throw new SQLException("no available connections were found");
+        }
+        return namedParameterJdbcTemplate;
+    }
+
+    /**
+     * 从namedParameterJdbcTemplateMap中随机获取一个NamedParameterJdbcTemplate
+     * 并依据backoff判断是否处于退避阶段
+     *
+     * @param namedParameterJdbcTemplateMap
+     * @return
+     */
+    protected NamedParameterJdbcTemplate getNamedParameterJdbcTemplate(Map<String, NamedParameterJdbcTemplate> namedParameterJdbcTemplateMap) {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+        //总连接数
+        int size = namedParameterJdbcTemplateMap.size();
+        //总连接数为0表示没有可用连接
+        if (size == 0) {
+            return null;
+        }
+        //随机下标
+        // ThreadLocalRandom比Random性能更高
+        // java7在所有情形下都更推荐使用ThreadLocalRandom，它向下兼容已有的代码且运营成本更低
+        int index = ThreadLocalRandom.current().nextInt(size);
+        //所有连接名（new String[0]用来指定数组类型，toArray方法的参数是泛型）
+        String[] names = namedParameterJdbcTemplateMap.keySet().toArray(new String[0]);
+        if (index >= names.length) {
+            /*
+                在主从读写分离模式下，如果从库连接异常发生退避，有可能出现index >= names.length造成names[index]下标溢出
+                因此递归重新获取namedParameterJdbcTemplate对象
+             */
+            namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplate(namedParameterJdbcTemplateMap);
+        } else {
+            //提取连接名
+            String name = names[index];
+            //此处获取的连接名有可能已经被退避了，可能会获取到null值
+            namedParameterJdbcTemplate = namedParameterJdbcTemplateMap.getOrDefault(name, null);
+            //确保最终拿到null值是因为namedParameterJdbcTemplateMap没有可用连接了
+            if (namedParameterJdbcTemplate == null && namedParameterJdbcTemplateMap.size() > 0) {
+                namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplate(namedParameterJdbcTemplateMap);
+            }
+        }
+        return namedParameterJdbcTemplate;
     }
 }
