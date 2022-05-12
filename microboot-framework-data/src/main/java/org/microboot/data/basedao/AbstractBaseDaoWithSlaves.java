@@ -1,79 +1,84 @@
 package org.microboot.data.basedao;
 
 import com.google.common.collect.Maps;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.microboot.core.bean.ApplicationContextHolder;
-import org.microboot.core.constant.Constant;
 import org.microboot.core.entity.Page;
 import org.microboot.core.utils.ConvertUtils;
+import org.microboot.data.container.DataContainer;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
 /**
  * @author 胡鹏
  */
-public class BaseDao extends AbstractBaseDaoWithSlaves {
+public abstract class AbstractBaseDaoWithSlaves extends AbstractBaseDaoWithOthers {
 
     private final Logger logger = LogManager.getLogger(this.getClass());
 
     /**
      * @param templateName
      * @param parameters
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public List<Map<String, Object>> queryForList(String templateName, Map<String, ?> parameters) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+    public List<Map<String, Object>> queryForListWithSlaves(String templateName, Map<String, ?> parameters, String dataBaseName) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves(dataBaseName);
         return this.queryForList(templateName, parameters, namedParameterJdbcTemplate);
     }
 
     /**
      * @param templateName
      * @param javaBean
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public List<Map<String, Object>> queryForList(String templateName, Object javaBean) throws Exception {
+    public List<Map<String, Object>> queryForListWithSlaves(String templateName, Object javaBean, String dataBaseName) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.queryForList(templateName, parameters);
+        return this.queryForListWithSlaves(templateName, parameters, dataBaseName);
     }
 
     /**
      * @param templateName
      * @param paramKey
      * @param paramValue
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public List<Map<String, Object>> queryForList(String templateName, String paramKey, Object paramValue) throws Exception {
+    public List<Map<String, Object>> queryForListWithSlaves(String templateName, String paramKey, Object paramValue, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
             throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
-        return this.queryForList(templateName, parameters);
+        return this.queryForListWithSlaves(templateName, parameters, dataBaseName);
     }
 
     /**
      * @param templateName
      * @param parameters
      * @param clazz
+     * @param dataBaseName
      * @param <T>
      * @return
      * @throws Exception
      */
-    public <T> List<T> queryForList(String templateName, Map<String, ?> parameters, Class<T> clazz) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+    public <T> List<T> queryForListWithSlaves(String templateName, Map<String, ?> parameters, Class<T> clazz, String dataBaseName) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves(dataBaseName);
         return this.queryForList(templateName, parameters, clazz, namedParameterJdbcTemplate);
     }
 
@@ -81,16 +86,17 @@ public class BaseDao extends AbstractBaseDaoWithSlaves {
      * @param templateName
      * @param javaBean
      * @param clazz
+     * @param dataBaseName
      * @param <T>
      * @return
      * @throws Exception
      */
-    public <T> List<T> queryForList(String templateName, Object javaBean, Class<T> clazz) throws Exception {
+    public <T> List<T> queryForListWithSlaves(String templateName, Object javaBean, Class<T> clazz, String dataBaseName) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.queryForList(templateName, parameters, clazz);
+        return this.queryForListWithSlaves(templateName, parameters, clazz, dataBaseName);
     }
 
     /**
@@ -98,70 +104,75 @@ public class BaseDao extends AbstractBaseDaoWithSlaves {
      * @param paramKey
      * @param paramValue
      * @param clazz
+     * @param dataBaseName
      * @param <T>
      * @return
      * @throws Exception
      */
-    public <T> List<T> queryForList(String templateName, String paramKey, Object paramValue, Class<T> clazz) throws Exception {
+    public <T> List<T> queryForListWithSlaves(String templateName, String paramKey, Object paramValue, Class<T> clazz, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
             throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
-        return this.queryForList(templateName, parameters, clazz);
+        return this.queryForListWithSlaves(templateName, parameters, clazz, dataBaseName);
     }
 
     /**
      * @param templateName
      * @param parameters
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public Map<String, Object> queryForMap(String templateName, Map<String, ?> parameters) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+    public Map<String, Object> queryForMapWithSlaves(String templateName, Map<String, ?> parameters, String dataBaseName) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves(dataBaseName);
         return this.queryForMap(templateName, parameters, namedParameterJdbcTemplate);
     }
 
     /**
      * @param templateName
      * @param javaBean
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public Map<String, Object> queryForMap(String templateName, Object javaBean) throws Exception {
+    public Map<String, Object> queryForMapWithSlaves(String templateName, Object javaBean, String dataBaseName) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.queryForMap(templateName, parameters);
+        return this.queryForMapWithSlaves(templateName, parameters, dataBaseName);
     }
 
     /**
      * @param templateName
      * @param paramKey
      * @param paramValue
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public Map<String, Object> queryForMap(String templateName, String paramKey, Object paramValue) throws Exception {
+    public Map<String, Object> queryForMapWithSlaves(String templateName, String paramKey, Object paramValue, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
             throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
-        return this.queryForMap(templateName, parameters);
+        return this.queryForMapWithSlaves(templateName, parameters, dataBaseName);
     }
 
     /**
      * @param templateName
      * @param parameters
      * @param clazz
+     * @param dataBaseName
      * @param <T>
      * @return
      * @throws Exception
      */
-    public <T> T queryForObject(String templateName, Map<String, ?> parameters, Class<T> clazz) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+    public <T> T queryForObjectWithSlaves(String templateName, Map<String, ?> parameters, Class<T> clazz, String dataBaseName) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves(dataBaseName);
         return this.queryForObject(templateName, parameters, clazz, namedParameterJdbcTemplate);
     }
 
@@ -169,16 +180,17 @@ public class BaseDao extends AbstractBaseDaoWithSlaves {
      * @param templateName
      * @param javaBean
      * @param clazz
+     * @param dataBaseName
      * @param <T>
      * @return
      * @throws Exception
      */
-    public <T> T queryForObject(String templateName, Object javaBean, Class<T> clazz) throws Exception {
+    public <T> T queryForObjectWithSlaves(String templateName, Object javaBean, Class<T> clazz, String dataBaseName) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.queryForObject(templateName, parameters, clazz);
+        return this.queryForObjectWithSlaves(templateName, parameters, clazz, dataBaseName);
     }
 
     /**
@@ -186,116 +198,124 @@ public class BaseDao extends AbstractBaseDaoWithSlaves {
      * @param paramKey
      * @param paramValue
      * @param clazz
+     * @param dataBaseName
      * @param <T>
      * @return
      * @throws Exception
      */
-    public <T> T queryForObject(String templateName, String paramKey, Object paramValue, Class<T> clazz) throws Exception {
+    public <T> T queryForObjectWithSlaves(String templateName, String paramKey, Object paramValue, Class<T> clazz, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
             throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
-        return this.queryForObject(templateName, parameters, clazz);
+        return this.queryForObjectWithSlaves(templateName, parameters, clazz, dataBaseName);
     }
 
     /**
      * @param templateName
      * @param parameters
+     * @param dataBaseName
      * @param rse
      * @param <T>
      * @return
      * @throws Exception
      */
-    public <T> T query(String templateName, Map<String, ?> parameters, ResultSetExtractor<T> rse) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+    public <T> T queryWithSlaves(String templateName, Map<String, ?> parameters, String dataBaseName, ResultSetExtractor<T> rse) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves(dataBaseName);
         return this.query(templateName, parameters, namedParameterJdbcTemplate, rse);
     }
 
     /**
      * @param templateName
      * @param javaBean
+     * @param dataBaseName
      * @param rse
      * @param <T>
      * @return
      * @throws Exception
      */
-    public <T> T query(String templateName, Object javaBean, ResultSetExtractor<T> rse) throws Exception {
+    public <T> T queryWithSlaves(String templateName, Object javaBean, String dataBaseName, ResultSetExtractor<T> rse) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.query(templateName, parameters, rse);
+        return this.queryWithSlaves(templateName, parameters, dataBaseName, rse);
     }
 
     /**
      * @param templateName
      * @param paramKey
      * @param paramValue
+     * @param dataBaseName
      * @param rse
      * @param <T>
      * @return
      * @throws Exception
      */
-    public <T> T query(String templateName, String paramKey, Object paramValue, ResultSetExtractor<T> rse) throws Exception {
+    public <T> T queryWithSlaves(String templateName, String paramKey, Object paramValue, String dataBaseName, ResultSetExtractor<T> rse) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
             throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
-        return this.query(templateName, parameters, rse);
+        return this.queryWithSlaves(templateName, parameters, dataBaseName, rse);
     }
 
     /**
      * @param templateName
      * @param parameters
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public SqlRowSet queryForSqlRowSet(String templateName, Map<String, ?> parameters) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+    public SqlRowSet queryForSqlRowSetWithSlaves(String templateName, Map<String, ?> parameters, String dataBaseName) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves(dataBaseName);
         return this.queryForSqlRowSet(templateName, parameters, namedParameterJdbcTemplate);
     }
 
     /**
      * @param templateName
      * @param javaBean
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public SqlRowSet queryForSqlRowSet(String templateName, Object javaBean) throws Exception {
+    public SqlRowSet queryForSqlRowSetWithSlaves(String templateName, Object javaBean, String dataBaseName) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.queryForSqlRowSet(templateName, parameters);
+        return this.queryForSqlRowSetWithSlaves(templateName, parameters, dataBaseName);
     }
 
     /**
      * @param templateName
      * @param paramKey
      * @param paramValue
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public SqlRowSet queryForSqlRowSet(String templateName, String paramKey, Object paramValue) throws Exception {
+    public SqlRowSet queryForSqlRowSetWithSlaves(String templateName, String paramKey, Object paramValue, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
             throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
-        return this.queryForSqlRowSet(templateName, parameters);
+        return this.queryForSqlRowSetWithSlaves(templateName, parameters, dataBaseName);
     }
 
     /**
      * @param paginationCount
      * @param pagination
      * @param parameters
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public Page pagination(String paginationCount, String pagination, Map<String, ?> parameters) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+    public Page paginationWithSlaves(String paginationCount, String pagination, Map<String, ?> parameters, String dataBaseName) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves(dataBaseName);
         return this.pagination(paginationCount, pagination, parameters, namedParameterJdbcTemplate);
     }
 
@@ -303,68 +323,73 @@ public class BaseDao extends AbstractBaseDaoWithSlaves {
      * @param paginationCount
      * @param pagination
      * @param javaBean
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public Page pagination(String paginationCount, String pagination, Object javaBean) throws Exception {
+    public Page paginationWithSlaves(String paginationCount, String pagination, Object javaBean, String dataBaseName) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.pagination(paginationCount, pagination, parameters);
+        return this.paginationWithSlaves(paginationCount, pagination, parameters, dataBaseName);
     }
 
     /**
      * @param sql
      * @param parameters
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public List<Map<String, Object>> queryForListBySql(String sql, Map<String, ?> parameters) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+    public List<Map<String, Object>> queryForListBySqlWithSlaves(String sql, Map<String, ?> parameters, String dataBaseName) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves(dataBaseName);
         return this.queryForListBySql(sql, parameters, namedParameterJdbcTemplate);
     }
 
     /**
      * @param sql
      * @param javaBean
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public List<Map<String, Object>> queryForListBySql(String sql, Object javaBean) throws Exception {
+    public List<Map<String, Object>> queryForListBySqlWithSlaves(String sql, Object javaBean, String dataBaseName) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.queryForListBySql(sql, parameters);
+        return this.queryForListBySqlWithSlaves(sql, parameters, dataBaseName);
     }
 
     /**
      * @param sql
      * @param paramKey
      * @param paramValue
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public List<Map<String, Object>> queryForListBySql(String sql, String paramKey, Object paramValue) throws Exception {
+    public List<Map<String, Object>> queryForListBySqlWithSlaves(String sql, String paramKey, Object paramValue, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
             throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
-        return this.queryForListBySql(sql, parameters);
+        return this.queryForListBySqlWithSlaves(sql, parameters, dataBaseName);
     }
 
     /**
      * @param sql
      * @param parameters
      * @param clazz
+     * @param dataBaseName
      * @param <T>
      * @return
      * @throws Exception
      */
-    public <T> List<T> queryForListBySql(String sql, Map<String, ?> parameters, Class<T> clazz) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+    public <T> List<T> queryForListBySqlWithSlaves(String sql, Map<String, ?> parameters, Class<T> clazz, String dataBaseName) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves(dataBaseName);
         return this.queryForListBySql(sql, parameters, clazz, namedParameterJdbcTemplate);
     }
 
@@ -372,16 +397,17 @@ public class BaseDao extends AbstractBaseDaoWithSlaves {
      * @param sql
      * @param javaBean
      * @param clazz
+     * @param dataBaseName
      * @param <T>
      * @return
      * @throws Exception
      */
-    public <T> List<T> queryForListBySql(String sql, Object javaBean, Class<T> clazz) throws Exception {
+    public <T> List<T> queryForListBySqlWithSlaves(String sql, Object javaBean, Class<T> clazz, String dataBaseName) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.queryForListBySql(sql, parameters, clazz);
+        return this.queryForListBySqlWithSlaves(sql, parameters, clazz, dataBaseName);
     }
 
     /**
@@ -389,70 +415,75 @@ public class BaseDao extends AbstractBaseDaoWithSlaves {
      * @param paramKey
      * @param paramValue
      * @param clazz
+     * @param dataBaseName
      * @param <T>
      * @return
      * @throws Exception
      */
-    public <T> List<T> queryForListBySql(String sql, String paramKey, Object paramValue, Class<T> clazz) throws Exception {
+    public <T> List<T> queryForListBySqlWithSlaves(String sql, String paramKey, Object paramValue, Class<T> clazz, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
             throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
-        return this.queryForListBySql(sql, parameters, clazz);
+        return this.queryForListBySqlWithSlaves(sql, parameters, clazz, dataBaseName);
     }
 
     /**
      * @param sql
      * @param parameters
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public Map<String, Object> queryForMapBySql(String sql, Map<String, ?> parameters) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+    public Map<String, Object> queryForMapBySqlWithSlaves(String sql, Map<String, ?> parameters, String dataBaseName) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves(dataBaseName);
         return this.queryForMapBySql(sql, parameters, namedParameterJdbcTemplate);
     }
 
     /**
      * @param sql
      * @param javaBean
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public Map<String, Object> queryForMapBySql(String sql, Object javaBean) throws Exception {
+    public Map<String, Object> queryForMapBySqlWithSlaves(String sql, Object javaBean, String dataBaseName) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.queryForMapBySql(sql, parameters);
+        return this.queryForMapBySqlWithSlaves(sql, parameters, dataBaseName);
     }
 
     /**
      * @param sql
      * @param paramKey
      * @param paramValue
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public Map<String, Object> queryForMapBySql(String sql, String paramKey, Object paramValue) throws Exception {
+    public Map<String, Object> queryForMapBySqlWithSlaves(String sql, String paramKey, Object paramValue, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
             throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
-        return this.queryForMapBySql(sql, parameters);
+        return this.queryForMapBySqlWithSlaves(sql, parameters, dataBaseName);
     }
 
     /**
      * @param sql
      * @param parameters
      * @param clazz
+     * @param dataBaseName
      * @param <T>
      * @return
      * @throws Exception
      */
-    public <T> T queryForObjectBySql(String sql, Map<String, ?> parameters, Class<T> clazz) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+    public <T> T queryForObjectBySqlWithSlaves(String sql, Map<String, ?> parameters, Class<T> clazz, String dataBaseName) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves(dataBaseName);
         return this.queryForObjectBySql(sql, parameters, clazz, namedParameterJdbcTemplate);
     }
 
@@ -460,16 +491,17 @@ public class BaseDao extends AbstractBaseDaoWithSlaves {
      * @param sql
      * @param javaBean
      * @param clazz
+     * @param dataBaseName
      * @param <T>
      * @return
      * @throws Exception
      */
-    public <T> T queryForObjectBySql(String sql, Object javaBean, Class<T> clazz) throws Exception {
+    public <T> T queryForObjectBySqlWithSlaves(String sql, Object javaBean, Class<T> clazz, String dataBaseName) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.queryForObjectBySql(sql, parameters, clazz);
+        return this.queryForObjectBySqlWithSlaves(sql, parameters, clazz, dataBaseName);
     }
 
     /**
@@ -477,116 +509,124 @@ public class BaseDao extends AbstractBaseDaoWithSlaves {
      * @param paramKey
      * @param paramValue
      * @param clazz
+     * @param dataBaseName
      * @param <T>
      * @return
      * @throws Exception
      */
-    public <T> T queryForObjectBySql(String sql, String paramKey, Object paramValue, Class<T> clazz) throws Exception {
+    public <T> T queryForObjectBySqlWithSlaves(String sql, String paramKey, Object paramValue, Class<T> clazz, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
             throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
-        return this.queryForObjectBySql(sql, parameters, clazz);
+        return this.queryForObjectBySqlWithSlaves(sql, parameters, clazz, dataBaseName);
     }
 
     /**
      * @param sql
      * @param parameters
+     * @param dataBaseName
      * @param rse
      * @param <T>
      * @return
      * @throws Exception
      */
-    public <T> T queryBySql(String sql, Map<String, ?> parameters, ResultSetExtractor<T> rse) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+    public <T> T queryBySqlWithSlaves(String sql, Map<String, ?> parameters, String dataBaseName, ResultSetExtractor<T> rse) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves(dataBaseName);
         return this.queryBySql(sql, parameters, namedParameterJdbcTemplate, rse);
     }
 
     /**
      * @param sql
      * @param javaBean
+     * @param dataBaseName
      * @param rse
      * @param <T>
      * @return
      * @throws Exception
      */
-    public <T> T queryBySql(String sql, Object javaBean, ResultSetExtractor<T> rse) throws Exception {
+    public <T> T queryBySqlWithSlaves(String sql, Object javaBean, String dataBaseName, ResultSetExtractor<T> rse) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.queryBySql(sql, parameters, rse);
+        return this.queryBySqlWithSlaves(sql, parameters, dataBaseName, rse);
     }
 
     /**
      * @param sql
      * @param paramKey
      * @param paramValue
+     * @param dataBaseName
      * @param rse
      * @param <T>
      * @return
      * @throws Exception
      */
-    public <T> T queryBySql(String sql, String paramKey, Object paramValue, ResultSetExtractor<T> rse) throws Exception {
+    public <T> T queryBySqlWithSlaves(String sql, String paramKey, Object paramValue, String dataBaseName, ResultSetExtractor<T> rse) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
             throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
-        return this.queryBySql(sql, parameters, rse);
+        return this.queryBySqlWithSlaves(sql, parameters, dataBaseName, rse);
     }
 
     /**
      * @param sql
      * @param parameters
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public SqlRowSet queryForSqlRowSetBySql(String sql, Map<String, ?> parameters) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+    public SqlRowSet queryForSqlRowSetBySqlWithSlaves(String sql, Map<String, ?> parameters, String dataBaseName) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves(dataBaseName);
         return this.queryForSqlRowSetBySql(sql, parameters, namedParameterJdbcTemplate);
     }
 
     /**
      * @param sql
      * @param javaBean
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public SqlRowSet queryForSqlRowSetBySql(String sql, Object javaBean) throws Exception {
+    public SqlRowSet queryForSqlRowSetBySqlWithSlaves(String sql, Object javaBean, String dataBaseName) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.queryForSqlRowSetBySql(sql, parameters);
+        return this.queryForSqlRowSetBySqlWithSlaves(sql, parameters, dataBaseName);
     }
 
     /**
      * @param sql
      * @param paramKey
      * @param paramValue
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public SqlRowSet queryForSqlRowSetBySql(String sql, String paramKey, Object paramValue) throws Exception {
+    public SqlRowSet queryForSqlRowSetBySqlWithSlaves(String sql, String paramKey, Object paramValue, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
             throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
-        return this.queryForSqlRowSetBySql(sql, parameters);
+        return this.queryForSqlRowSetBySqlWithSlaves(sql, parameters, dataBaseName);
     }
 
     /**
      * @param paginationCountSql
      * @param paginationSql
      * @param parameters
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public Page paginationBySql(String paginationCountSql, String paginationSql, Map<String, ?> parameters) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+    public Page paginationBySqlWithSlaves(String paginationCountSql, String paginationSql, Map<String, ?> parameters, String dataBaseName) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves(dataBaseName);
         return this.paginationBySql(paginationCountSql, paginationSql, parameters, namedParameterJdbcTemplate);
     }
 
@@ -594,140 +634,175 @@ public class BaseDao extends AbstractBaseDaoWithSlaves {
      * @param paginationCountSql
      * @param paginationSql
      * @param javaBean
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public Page paginationBySql(String paginationCountSql, String paginationSql, Object javaBean) throws Exception {
+    public Page paginationBySqlWithSlaves(String paginationCountSql, String paginationSql, Object javaBean, String dataBaseName) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.paginationBySql(paginationCountSql, paginationSql, parameters);
+        return this.paginationBySqlWithSlaves(paginationCountSql, paginationSql, parameters, dataBaseName);
     }
 
     /**
      * @param templateName
      * @param parameters
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public int execute(String templateName, Map<String, ?> parameters) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.MASTER_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
+    public int executeWithSlaves(String templateName, Map<String, ?> parameters, String dataBaseName) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves(dataBaseName);
         return this.execute(templateName, parameters, namedParameterJdbcTemplate);
     }
 
     /**
      * @param templateName
      * @param javaBean
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public int execute(String templateName, Object javaBean) throws Exception {
+    public int executeWithSlaves(String templateName, Object javaBean, String dataBaseName) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.execute(templateName, parameters);
+        return this.executeWithSlaves(templateName, parameters, dataBaseName);
     }
 
     /**
      * @param templateName
      * @param paramKey
      * @param paramValue
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public int execute(String templateName, String paramKey, Object paramValue) throws Exception {
+    public int executeWithSlaves(String templateName, String paramKey, Object paramValue, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
             throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
-        return this.execute(templateName, parameters);
+        return this.executeWithSlaves(templateName, parameters, dataBaseName);
     }
 
     /**
      * @param templateName
      * @param parameterSource
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public int execute(String templateName, MapSqlParameterSource parameterSource) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.MASTER_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
+    public int executeWithSlaves(String templateName, MapSqlParameterSource parameterSource, String dataBaseName) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves(dataBaseName);
         return this.execute(templateName, parameterSource, namedParameterJdbcTemplate);
     }
 
     /**
      * @param templateName
      * @param parametersList
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public int[] executeBatch(String templateName, List<?> parametersList) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.MASTER_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
+    public int[] executeBatchWithSlaves(String templateName, List<?> parametersList, String dataBaseName) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves(dataBaseName);
         return this.executeBatch(templateName, parametersList, namedParameterJdbcTemplate);
     }
 
     /**
      * @param sql
      * @param parameters
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public int executeBySql(String sql, Map<String, ?> parameters) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.MASTER_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
+    public int executeBySqlWithSlaves(String sql, Map<String, ?> parameters, String dataBaseName) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves(dataBaseName);
         return this.executeBySql(sql, parameters, namedParameterJdbcTemplate);
     }
 
     /**
      * @param sql
      * @param javaBean
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public int executeBySql(String sql, Object javaBean) throws Exception {
+    public int executeBySqlWithSlaves(String sql, Object javaBean, String dataBaseName) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.executeBySql(sql, parameters);
+        return this.executeBySqlWithSlaves(sql, parameters, dataBaseName);
     }
 
     /**
      * @param sql
      * @param paramKey
      * @param paramValue
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public int executeBySql(String sql, String paramKey, Object paramValue) throws Exception {
+    public int executeBySqlWithSlaves(String sql, String paramKey, Object paramValue, String dataBaseName) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
             throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
-        return this.executeBySql(sql, parameters);
+        return this.executeBySqlWithSlaves(sql, parameters, dataBaseName);
     }
 
     /**
      * @param sql
      * @param parameterSource
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public int executeBySql(String sql, MapSqlParameterSource parameterSource) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.MASTER_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
+    public int executeBySqlWithSlaves(String sql, MapSqlParameterSource parameterSource, String dataBaseName) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves(dataBaseName);
         return this.executeBySql(sql, parameterSource, namedParameterJdbcTemplate);
     }
 
     /**
      * @param sql
      * @param parametersList
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    public int[] executeBatchBySql(String sql, List<?> parametersList) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.MASTER_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
+    public int[] executeBatchBySqlWithSlaves(String sql, List<?> parametersList, String dataBaseName) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves(dataBaseName);
         return this.executeBatchBySql(sql, parametersList, namedParameterJdbcTemplate);
+    }
+
+    /**
+     * @param dataBaseName（从库）
+     * @return
+     * @throws Exception
+     */
+    protected NamedParameterJdbcTemplate getNamedParameterJdbcTemplateWithSlaves(String... dataBaseName) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+        Map<String, NamedParameterJdbcTemplate> namedParameterJdbcTemplateMap = DataContainer.slavesMap;
+        if (ArrayUtils.isNotEmpty(dataBaseName)) {
+            String name = dataBaseName[0];
+            namedParameterJdbcTemplate = namedParameterJdbcTemplateMap.getOrDefault(name, null);
+        } else {
+            namedParameterJdbcTemplate = this.getOrCreate();
+            if (namedParameterJdbcTemplate != null) {
+                return namedParameterJdbcTemplate;
+            }
+            namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplate(namedParameterJdbcTemplateMap);
+        }
+        if (namedParameterJdbcTemplate == null) {
+            throw new SQLException("no available connections were found");
+        }
+        return namedParameterJdbcTemplate;
     }
 }
