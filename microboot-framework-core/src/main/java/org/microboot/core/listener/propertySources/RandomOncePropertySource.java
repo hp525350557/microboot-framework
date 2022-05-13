@@ -23,11 +23,11 @@ public class RandomOncePropertySource extends PropertySource<ThreadLocalRandom> 
 
     private static final String PREFIX = "randomOnce.";
 
-    //自定义属性-Integer
-    private static Integer attrToInt;
+    //自定义属性-int
+    private static int attrToInt;
 
-    //自定义属性-Long
-    private static Long attrToLong;
+    //自定义属性-long
+    private static long attrToLong;
 
     //自定义属性-String
     private static String attrToString;
@@ -59,14 +59,14 @@ public class RandomOncePropertySource extends PropertySource<ThreadLocalRandom> 
     private Object getRandomValue(String type) {
         //匹配${randomOnce.int}
         if (org.apache.commons.lang3.StringUtils.equalsIgnoreCase("int", type)) {
-            if (attrToInt == null) {
+            if (attrToInt <= 0) {
                 attrToInt = getSource().nextInt();
             }
             return attrToInt;
         }
         //匹配${randomOnce.long}
         if (org.apache.commons.lang3.StringUtils.equalsIgnoreCase("long", type)) {
-            if (attrToLong == null) {
+            if (attrToLong <= 0) {
                 attrToLong = getSource().nextLong();
             }
             return attrToLong;
@@ -75,7 +75,7 @@ public class RandomOncePropertySource extends PropertySource<ThreadLocalRandom> 
         //此处type = "int[0,65535]"
         String range = getRange(type, "int");
         if (range != null) {
-            if (attrToInt == null) {
+            if (attrToInt <= 0) {
                 attrToInt = getNextIntInRange(range);
             }
             return attrToInt;
@@ -84,7 +84,7 @@ public class RandomOncePropertySource extends PropertySource<ThreadLocalRandom> 
         //此处type = "long[0,65535]"
         range = getRange(type, "long");
         if (range != null) {
-            if (attrToLong == null) {
+            if (attrToLong <= 0) {
                 attrToLong = getNextLongInRange(range);
             }
             return attrToLong;

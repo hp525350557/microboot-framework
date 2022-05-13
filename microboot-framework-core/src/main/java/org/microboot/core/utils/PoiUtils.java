@@ -34,7 +34,7 @@ public class PoiUtils {
      * @param inputStream
      * @return
      */
-    public static Boolean isOfficeFile(InputStream inputStream) {
+    public static boolean isOfficeFile(InputStream inputStream) {
         if (inputStream == null) {
             return false;
         }
@@ -57,7 +57,7 @@ public class PoiUtils {
      * @return
      * @throws IOException
      */
-    public static Boolean isOfficeFile(String filePath) {
+    public static boolean isOfficeFile(String filePath) {
         if (StringUtils.isBlank(filePath)) {
             return false;
         }
@@ -77,7 +77,7 @@ public class PoiUtils {
      * @param filePath
      * @return
      */
-    public static Boolean checkExtension(String filePath) {
+    public static boolean checkExtension(String filePath) {
         if (StringUtils.isBlank(filePath)) {
             return false;
         }

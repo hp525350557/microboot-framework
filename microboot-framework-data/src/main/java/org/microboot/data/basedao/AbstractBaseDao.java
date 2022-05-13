@@ -356,13 +356,13 @@ public abstract class AbstractBaseDao extends TransmittableThreadLocal<NamedPara
         logger.info(paginationCountSql + " " + ConvertUtils.map2Json(parameters));
         Map<String, Object> totalMap = namedParameterJdbcTemplate.queryForMap(paginationCountSql, parameters);
         //默认值
-        Integer defaultNum = 0;
+        int defaultNum = 0;
         //总数据量
-        Integer total = MapUtils.getInteger(totalMap, "count", defaultNum);
+        int total = MapUtils.getIntValue(totalMap, "count", defaultNum);
         //每页显示数
-        Integer pageSize = MapUtils.getInteger(parameters, "pageSize", defaultNum);
+        int pageSize = MapUtils.getIntValue(parameters, "pageSize", defaultNum);
         //当前页
-        Integer pageNumber = MapUtils.getInteger(parameters, "pageNumber", defaultNum);
+        int pageNumber = MapUtils.getIntValue(parameters, "pageNumber", defaultNum);
         //构建Page对象
         Page page = Page.builder().setPageSize(pageSize).setPageNumber(pageNumber).setTotal(total).generate().create();
         parameters.put("offset", page.getOffset());

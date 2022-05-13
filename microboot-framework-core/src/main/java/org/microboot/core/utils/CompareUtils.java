@@ -17,7 +17,7 @@ public class CompareUtils {
      * @param isEq
      * @return
      */
-    public static boolean greateThan(String value, String valueRange, Boolean isEq) {
+    public static boolean greateThan(String value, String valueRange, boolean isEq) {
         if (StringUtils.isBlank(value) || StringUtils.isBlank(valueRange)) {
             return false;
         }
@@ -52,7 +52,7 @@ public class CompareUtils {
      * @param isEq
      * @return
      */
-    public static boolean lessThan(String value, String valueRange, Boolean isEq) {
+    public static boolean lessThan(String value, String valueRange, boolean isEq) {
         if (StringUtils.isBlank(value) || StringUtils.isBlank(valueRange)) {
             return false;
         }
@@ -88,7 +88,7 @@ public class CompareUtils {
      * @param rightOpen
      * @return
      */
-    public static boolean between(String value, String minRange, String maxRange, Boolean leftOpen, Boolean rightOpen) {
+    public static boolean between(String value, String minRange, String maxRange, boolean leftOpen, boolean rightOpen) {
         if (StringUtils.isBlank(value) || StringUtils.isBlank(minRange) || StringUtils.isBlank(maxRange)) {
             return false;
         }

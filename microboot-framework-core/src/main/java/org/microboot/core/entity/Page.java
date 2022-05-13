@@ -24,19 +24,19 @@ public class Page implements Serializable {
     private static final Logger logger = LogManager.getLogger(Page.class);
 
     //总记录数
-    private Integer total;
+    private int total;
     //每页记录数
-    private Integer pageSize;
+    private int pageSize;
     //当前页数
-    private Integer pageNumber;
+    private int pageNumber;
     //总页数
-    private Integer totalPage;
+    private int totalPage;
     //开始行号(从0开始)
-    private Integer offset;
+    private int offset;
     //开始行号(从1开始)
-    private Integer startRow;
+    private int startRow;
     //结束行号
-    private Integer endRow;
+    private int endRow;
     //列表数据
     private List<Map<String, Object>> rows;
     //非常规结构数据
@@ -75,61 +75,53 @@ public class Page implements Serializable {
         private Builder() {
         }
 
-        public Builder setTotal(Integer total) {
+        public Builder setTotal(int total) {
             this.page.total = NumberUtils.max(0, total);
             return this;
         }
 
-        public Builder setPageSize(Integer pageSize) {
+        public Builder setPageSize(int pageSize) {
             this.page.pageSize = NumberUtils.max(0, pageSize);
             return this;
         }
 
-        public Builder setPageNumber(Integer pageNumber) {
+        public Builder setPageNumber(int pageNumber) {
             this.page.pageNumber = NumberUtils.max(0, pageNumber);
             return this;
         }
 
-        public Builder setTotalPage(Integer totalPage) {
+        public Builder setTotalPage(int totalPage) {
             this.page.totalPage = NumberUtils.max(0, totalPage);
             return this;
         }
 
-        public Builder setOffset(Integer offset) {
+        public Builder setOffset(int offset) {
             this.page.offset = NumberUtils.max(0, offset);
             return this;
         }
 
-        public Builder setStartRow(Integer startRow) {
+        public Builder setStartRow(int startRow) {
             this.page.startRow = NumberUtils.max(0, startRow);
             return this;
         }
 
-        public Builder setEndRow(Integer endRow) {
+        public Builder setEndRow(int endRow) {
             this.page.endRow = NumberUtils.max(0, endRow);
             return this;
         }
 
         public Builder generate() {
-            boolean b1 = this.page.total == null || this.page.total == 0;
-            boolean b2 = this.page.pageSize == null || this.page.pageSize == 0;
-            boolean b3 = this.page.pageNumber == null || this.page.pageNumber == 0;
+            boolean b1 = this.page.total <= 0;
+            boolean b2 = this.page.pageSize <= 0;
+            boolean b3 = this.page.pageNumber <= 0;
             //计算总页数
-            if (this.page.totalPage == null) {
-                this.page.totalPage = (b1 || b2) ? 0 : (this.page.total - 1) / this.page.pageSize + 1;
-            }
+            this.page.totalPage = (b1 || b2) ? 0 : (this.page.total - 1) / this.page.pageSize + 1;
             //计算开始行号(从0开始)
-            if (this.page.offset == null) {
-                this.page.offset = (b2 || b3) ? 0 : (this.page.pageNumber - 1) * this.page.pageSize;
-            }
+            this.page.offset = (b2 || b3) ? 0 : (this.page.pageNumber - 1) * this.page.pageSize;
             //计算开始行号(从1开始)
-            if (this.page.startRow == null) {
-                this.page.startRow = (b2 || b3) ? 0 : (this.page.pageNumber - 1) * this.page.pageSize + 1;
-            }
+            this.page.startRow = (b2 || b3) ? 0 : (this.page.pageNumber - 1) * this.page.pageSize + 1;
             //计算结束行号
-            if (this.page.endRow == null) {
-                this.page.endRow = (b2 || b3) ? 0 : this.page.pageNumber * this.page.pageSize;
-            }
+            this.page.endRow = (b2 || b3) ? 0 : this.page.pageNumber * this.page.pageSize;
             return this;
         }
 

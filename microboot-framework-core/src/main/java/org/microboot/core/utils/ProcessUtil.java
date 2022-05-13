@@ -20,7 +20,7 @@ public class ProcessUtil {
     private interface Kernel32 extends Library {
         Kernel32 INSTANCE = Native.load("kernel32", Kernel32.class);
 
-        long GetProcessId(Long hProcess);
+        long GetProcessId(long hProcess);
     }
 
     /**
@@ -47,7 +47,7 @@ public class ProcessUtil {
             try {
                 field = process.getClass().getDeclaredField("handle");
                 field.setAccessible(true);
-                pid = Kernel32.INSTANCE.GetProcessId((Long) field.get(process));
+                pid = Kernel32.INSTANCE.GetProcessId((long) field.get(process));
             } catch (Throwable e) {
                 LoggerUtils.error(logger, e);
             }
@@ -56,7 +56,7 @@ public class ProcessUtil {
                 Class<?> clazz = Class.forName("java.lang.UNIXProcess");
                 field = clazz.getDeclaredField("pid");
                 field.setAccessible(true);
-                pid = (Long) field.get(process);
+                pid = (long) field.get(process);
             } catch (Throwable e) {
                 LoggerUtils.error(logger, e);
             }

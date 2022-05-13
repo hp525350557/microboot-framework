@@ -73,19 +73,19 @@ public class StartRunner implements ApplicationRunner {
                  */
                 Lists.newArrayList(DataContainer.initMap.keySet().iterator()).parallelStream().forEach(name -> {
                     //从退避集合获取对应连接名的退避时间点
-                    //1、如果为空则表示name对应的连接未加入退避
-                    //2、如果非空则表示name对应的连接已加入退避
-                    Long backoffTime = MapUtils.getLong(DataContainer.backoffTimeMap, name);
+                    //1、如果为0则表示name对应的连接未加入退避
+                    //2、如果非0则表示name对应的连接已加入退避
+                    long backoffTime = MapUtils.getLongValue(DataContainer.backoffTimeMap, name, 0L);
                     //当前系统时间
-                    Long currentTime = System.currentTimeMillis();
+                    long currentTime = System.currentTimeMillis();
                     //上次退避上限时间
-                    Long oldBackoffTimeLimit = MapUtils.getLong(DataContainer.backoffTimeLimitMap, name, 0L);
+                    long oldBackoffTimeLimit = MapUtils.getLongValue(DataContainer.backoffTimeLimitMap, name, 0L);
                     //本次退避上限时间
-                    Long newBackoffTimeLimit = NumberUtils.min(backoffTimeLimitMax, NumberUtils.max(oldBackoffTimeLimit, backoffTimeLimit));
+                    long newBackoffTimeLimit = NumberUtils.min(backoffTimeLimitMax, NumberUtils.max(oldBackoffTimeLimit, backoffTimeLimit));
                     //判断当前连接是否处于退避期间：
-                    //1、退避时间点非空
+                    //1、退避时间点非0
                     //2、(退避时间点 + 退避上限时间)大于当前时间
-                    if (backoffTime != null && (backoffTime + newBackoffTimeLimit) > currentTime) {
+                    if (backoffTime != 0 && (backoffTime + newBackoffTimeLimit) > currentTime) {
                         //尚未达到恢复期
                         return;
                     }
@@ -114,7 +114,7 @@ public class StartRunner implements ApplicationRunner {
      * @param isBackoff
      * @param backoffTimeLimit
      */
-    private void setBackoffTime(String name, NamedParameterJdbcTemplate namedParameterJdbcTemplate, boolean isBackoff, Long backoffTimeLimit) {
+    private void setBackoffTime(String name, NamedParameterJdbcTemplate namedParameterJdbcTemplate, boolean isBackoff, long backoffTimeLimit) {
         if (isBackoff) {
             //添加退避
             DataContainer.slavesMap.remove(name);

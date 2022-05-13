@@ -51,13 +51,13 @@ public class CacheMQTopicListener implements MessageListener {
         Integer hashCode = this.get(() -> mm.getInt("hashCode"));
         Object key = this.get(() -> mm.getObject("key"));
         String md5 = this.get(() -> mm.getString("md5"));
-        if (hashCode == null || hashCode == 0) {
+        if (hashCode == null || hashCode.intValue() == 0) {
             return;
         }
         for (AbstractLocalCache cache : caches) {
             int currHashCode = cache.getClass().hashCode();
             //这里判断是否是当前服务的本地缓存，如果是，则不需要重复清除
-            if (hashCode == currHashCode) {
+            if (currHashCode == hashCode.intValue()) {
                 continue;
             }
             if (key == null) {

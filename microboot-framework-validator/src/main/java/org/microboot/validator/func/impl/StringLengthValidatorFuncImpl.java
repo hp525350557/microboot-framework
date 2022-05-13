@@ -20,18 +20,21 @@ public class StringLengthValidatorFuncImpl implements ValidatorFunc {
         if (StringUtils.isBlank(value)) {
             return null;
         }
-        Integer min = MapUtils.getDouble(validatorMap, "min") != null ? MapUtils.getDouble(validatorMap, "min").intValue() : null;
-        Integer max = MapUtils.getDouble(validatorMap, "max") != null ? MapUtils.getDouble(validatorMap, "max").intValue() : null;
-        if (min != null) {
+
+        if (validatorMap.containsKey("min")) {
+            int min = MapUtils.getIntValue(validatorMap, "min");
             if (!GenericValidator.minLength(value, min)) {
                 return ResultUtils.error(message);
             }
         }
-        if (max != null) {
+
+        if (validatorMap.containsKey("max")) {
+            int max = MapUtils.getIntValue(validatorMap, "max");
             if (!GenericValidator.maxLength(value, max)) {
                 return ResultUtils.error(message);
             }
         }
+
         return null;
     }
 

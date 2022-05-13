@@ -26,9 +26,9 @@ public class Token implements Serializable {
     //主题
     private String subject;
     //到期时间（用于计算失效时间）
-    private Long expire;
+    private long expire;
     //失效时间
-    private Long expireTime;
+    private long expireTime;
     //扩展参数
     private Map<String, Object> expand;
 
@@ -65,9 +65,6 @@ public class Token implements Serializable {
     }
 
     public boolean verifyExpireTime() {
-        if (this.expireTime == null) {
-            return false;
-        }
         return System.currentTimeMillis() <= this.expireTime;
     }
 
@@ -84,12 +81,12 @@ public class Token implements Serializable {
             return this;
         }
 
-        public Builder setExpire(Long expire) {
+        public Builder setExpire(long expire) {
             this.token.expire = NumberUtils.max(-1, expire);
             return this;
         }
 
-        public Builder setExpireTime(Long expireTime) {
+        public Builder setExpireTime(long expireTime) {
             this.token.expireTime = expireTime;
             return this;
         }
@@ -115,12 +112,10 @@ public class Token implements Serializable {
          * @return
          */
         public Builder generate(long startTimeMillis) {
-            if (this.token.expireTime == null) {
-                if (this.token.expire == -1) {
-                    this.token.expireTime = Long.MAX_VALUE;
-                } else {
-                    this.token.expireTime = startTimeMillis + this.token.expire;
-                }
+            if (this.token.expire == -1) {
+                this.token.expireTime = Long.MAX_VALUE;
+            } else {
+                this.token.expireTime = startTimeMillis + this.token.expire;
             }
             return this;
         }
