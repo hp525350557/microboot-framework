@@ -65,6 +65,9 @@ public class Token implements Serializable {
     }
 
     public boolean verifyExpireTime() {
+        if (this.expireTime <= 0) {
+            return false;
+        }
         return System.currentTimeMillis() <= this.expireTime;
     }
 
