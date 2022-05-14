@@ -15,7 +15,9 @@ public class CookieUtils {
             return null;
         }
         Cookie cookie = new Cookie(key, value);
-        func.func(cookie);
+        if (func != null) {
+            func.func(cookie);
+        }
         return cookie;
     }
 }
