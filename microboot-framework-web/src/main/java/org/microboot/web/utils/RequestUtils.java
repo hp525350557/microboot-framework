@@ -7,6 +7,8 @@ import eu.bitwalker.useragentutils.UserAgent;
 import eu.bitwalker.useragentutils.Version;
 import org.apache.commons.lang3.StringUtils;
 import org.microboot.core.utils.ConvertUtils;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -55,8 +57,12 @@ public class RequestUtils {
      */
     public static String getParameterString(HttpServletRequest request) {
         String value;
-        String requestMehtod = StringUtils.lowerCase(request.getMethod());
-        if (StringUtils.equals(requestMehtod, "get")) {
+        String requestMethod = request.getMethod();
+        String requestType = request.getHeader("X-Requested-With");
+        if (StringUtils.equalsIgnoreCase(RequestMethod.GET.name(), requestMethod)
+                && !StringUtils.equalsIgnoreCase("XMLHttpRequest", requestType)
+                && !StringUtils.startsWith(request.getContentType(), MediaType.APPLICATION_JSON_VALUE)
+        ) {
             value = request.getQueryString();
         } else {
             Map<String, String[]> parameterMap = request.getParameterMap();
@@ -73,8 +79,12 @@ public class RequestUtils {
      */
     public static Map<String, Object> getParameter(HttpServletRequest request) {
         String value;
-        String requestMehtod = StringUtils.lowerCase(request.getMethod());
-        if (StringUtils.equals(requestMehtod, "get")) {
+        String requestMethod = request.getMethod();
+        String requestType = request.getHeader("X-Requested-With");
+        if (StringUtils.equalsIgnoreCase(RequestMethod.GET.name(), requestMethod)
+                && !StringUtils.equalsIgnoreCase("XMLHttpRequest", requestType)
+                && !StringUtils.startsWith(request.getContentType(), MediaType.APPLICATION_JSON_VALUE)
+        ) {
             value = request.getQueryString();
             Map<String, Object> parameterMap = ConvertUtils.uriVars2Map(value);
             value = ConvertUtils.object2Json(parameterMap);
