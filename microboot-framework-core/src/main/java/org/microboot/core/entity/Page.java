@@ -24,19 +24,19 @@ public class Page implements Serializable {
     private static final Logger logger = LogManager.getLogger(Page.class);
 
     //总记录数
-    private int total;
+    private long total;
     //每页记录数
-    private int pageSize;
+    private long pageSize;
     //当前页数
-    private int pageNumber;
+    private long pageNumber;
     //总页数
-    private int totalPage;
+    private long totalPage;
     //开始行号(从0开始)
-    private int offset;
+    private long offset;
     //开始行号(从1开始)
-    private int startRow;
+    private long startRow;
     //结束行号
-    private int endRow;
+    private long endRow;
     //列表数据
     private List<Map<String, Object>> rows;
     //非常规结构数据
@@ -75,37 +75,37 @@ public class Page implements Serializable {
         private Builder() {
         }
 
-        public Builder setTotal(int total) {
+        public Builder setTotal(long total) {
             this.page.total = NumberUtils.max(0, total);
             return this;
         }
 
-        public Builder setPageSize(int pageSize) {
+        public Builder setPageSize(long pageSize) {
             this.page.pageSize = NumberUtils.max(0, pageSize);
             return this;
         }
 
-        public Builder setPageNumber(int pageNumber) {
+        public Builder setPageNumber(long pageNumber) {
             this.page.pageNumber = NumberUtils.max(0, pageNumber);
             return this;
         }
 
-        public Builder setTotalPage(int totalPage) {
+        public Builder setTotalPage(long totalPage) {
             this.page.totalPage = NumberUtils.max(0, totalPage);
             return this;
         }
 
-        public Builder setOffset(int offset) {
+        public Builder setOffset(long offset) {
             this.page.offset = NumberUtils.max(0, offset);
             return this;
         }
 
-        public Builder setStartRow(int startRow) {
+        public Builder setStartRow(long startRow) {
             this.page.startRow = NumberUtils.max(0, startRow);
             return this;
         }
 
-        public Builder setEndRow(int endRow) {
+        public Builder setEndRow(long endRow) {
             this.page.endRow = NumberUtils.max(0, endRow);
             return this;
         }
