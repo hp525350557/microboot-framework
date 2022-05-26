@@ -23,6 +23,7 @@ import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.microboot.core.func.Func0;
 
 import java.util.List;
 import java.util.Map;
@@ -34,7 +35,24 @@ public class HttpClientUtils {
 
     private static final Logger logger = LogManager.getLogger(HttpClientUtils.class);
 
-    public static String post(String url, int retry, int maxRetry, Map<String, Object> headers, Map<String, Object> parameters) {
+    public static String post(String url, int retry, int maxRetry) {
+        return HttpClientUtils.post(url, retry, maxRetry, null, null);
+    }
+
+    public static String post(String url,
+                              int retry,
+                              int maxRetry,
+                              Map<String, Object> headers,
+                              Map<String, Object> parameters) {
+        return HttpClientUtils.post(url, retry, maxRetry, headers, parameters, null);
+    }
+
+    public static String post(String url,
+                              int retry,
+                              int maxRetry,
+                              Map<String, Object> headers,
+                              Map<String, Object> parameters,
+                              Func0<RequestConfig> func) {
         CloseableHttpClient client = null;
         CloseableHttpResponse response = null;
         String result = null;
@@ -54,7 +72,7 @@ public class HttpClientUtils {
                     httpPost.setEntity(entity);
                 }
             }
-            RequestConfig requestConfig = getRequestConfig();
+            RequestConfig requestConfig = func == null ? getRequestConfig() : func.func();
             httpPost.setConfig(requestConfig);
             response = client.execute(httpPost);
             int statusCode = response.getStatusLine().getStatusCode();
@@ -71,7 +89,7 @@ public class HttpClientUtils {
             if (retry <= maxRetry) {
                 retry++;
                 logger.info("请求url：" + url + "异常，第" + retry + "次重试");
-                result = HttpClientUtils.post(url, retry, maxRetry, headers, parameters);
+                result = HttpClientUtils.post(url, retry, maxRetry, headers, parameters, func);
             }
             LoggerUtils.error(logger, e);
         } finally {
@@ -80,7 +98,24 @@ public class HttpClientUtils {
         return result;
     }
 
-    public static String postRaw(String url, int retry, int maxRetry, Map<String, Object> headers, Map<String, Object> parameters) {
+    public static String postRaw(String url, int retry, int maxRetry) {
+        return HttpClientUtils.postRaw(url, retry, maxRetry, null, null);
+    }
+
+    public static String postRaw(String url,
+                                 int retry,
+                                 int maxRetry,
+                                 Map<String, Object> headers,
+                                 Map<String, Object> parameters) {
+        return HttpClientUtils.postRaw(url, retry, maxRetry, headers, parameters, null);
+    }
+
+    public static String postRaw(String url,
+                                 int retry,
+                                 int maxRetry,
+                                 Map<String, Object> headers,
+                                 Map<String, Object> parameters,
+                                 Func0<RequestConfig> func) {
         CloseableHttpClient client = null;
         CloseableHttpResponse response = null;
         String result = null;
@@ -101,7 +136,7 @@ public class HttpClientUtils {
                 entity.setContentType(ContentType.APPLICATION_JSON.toString());
                 httpPost.setEntity(entity);
             }
-            RequestConfig requestConfig = getRequestConfig();
+            RequestConfig requestConfig = func == null ? getRequestConfig() : func.func();
             httpPost.setConfig(requestConfig);
             response = client.execute(httpPost);
             int statusCode = response.getStatusLine().getStatusCode();
@@ -118,7 +153,7 @@ public class HttpClientUtils {
             if (retry <= maxRetry) {
                 retry++;
                 logger.info("请求url：" + url + "异常，第" + retry + "次重试");
-                result = HttpClientUtils.postRaw(url, retry, maxRetry, headers, parameters);
+                result = HttpClientUtils.postRaw(url, retry, maxRetry, headers, parameters, func);
             }
             LoggerUtils.error(logger, e);
         } finally {
@@ -127,13 +162,31 @@ public class HttpClientUtils {
         return result;
     }
 
-    public static String get(String url, int retry, int maxRetry, Map<String, Object> headers, Map<String, Object> parameters) {
+    public static String get(String url, int retry, int maxRetry) {
+        return HttpClientUtils.get(url, retry, maxRetry, null, null);
+    }
+
+    public static String get(String url,
+                             int retry,
+                             int maxRetry,
+                             Map<String, Object> headers,
+                             Map<String, Object> parameters) {
+        return HttpClientUtils.get(url, retry, maxRetry, headers, parameters, null);
+    }
+
+    public static String get(String url,
+                             int retry,
+                             int maxRetry,
+                             Map<String, Object> headers,
+                             Map<String, Object> parameters,
+                             Func0<RequestConfig> func) {
         CloseableHttpClient client = null;
         CloseableHttpResponse response = null;
         String result = null;
         try {
             URIBuilder uri = new URIBuilder(url, Consts.UTF_8);
             client = HttpClientBuilder.create().build();
+            //注意，这里parameters必须在header前面，因为下面HttpGet创建依赖uri
             if (MapUtils.isNotEmpty(parameters)) {
                 List<NameValuePair> basicNameValuePairList = getNameValuePairsList(parameters);
                 if (CollectionUtils.isNotEmpty(basicNameValuePairList)) {
@@ -147,7 +200,7 @@ public class HttpClientUtils {
                     httpGet.setHeader(key, value);
                 }
             }
-            RequestConfig requestConfig = getRequestConfig();
+            RequestConfig requestConfig = func == null ? getRequestConfig() : func.func();
             httpGet.setConfig(requestConfig);
             response = client.execute(httpGet);
             int statusCode = response.getStatusLine().getStatusCode();
@@ -164,7 +217,7 @@ public class HttpClientUtils {
             if (retry <= maxRetry) {
                 retry++;
                 logger.info("请求url：" + url + "异常，第" + retry + "次重试");
-                result = HttpClientUtils.get(url, retry, maxRetry, headers, parameters);
+                result = HttpClientUtils.get(url, retry, maxRetry, headers, parameters, func);
             }
             LoggerUtils.error(logger, e);
         } finally {
