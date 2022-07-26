@@ -35,7 +35,7 @@ public class SecurityConfig {
     private final long SESSION_VALIDATION_INTERVAL = 3_600_000;
     private final long GLOBAL_SESSION_TIMEOUT = 1_800_000;
 
-    private final String AUTHC_URL = "/**";
+    private final String OAUTH_URL = "/**";
 
     private final boolean CACHING_ENABLED = false;
     private final boolean AUTHENTICATION_CACHING_ENABLED = false;
@@ -104,7 +104,7 @@ public class SecurityConfig {
                 filterMap.put(anonPath, "anon");
             }
         }
-        filterMap.put(AUTHC_URL, "oauth2");
+        filterMap.put(OAUTH_URL, "oauth2");
         shiroFilterFactoryBean.setFilterChainDefinitionMap(filterMap);
         return shiroFilterFactoryBean;
     }
