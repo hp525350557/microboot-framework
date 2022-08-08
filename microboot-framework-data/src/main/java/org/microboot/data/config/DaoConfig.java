@@ -158,7 +158,7 @@ public class DaoConfig {
             //设置bean属性
             beanDefinitionBuilder.addPropertyValue("dataSource", druidDataSource);
             //注册bean
-            defaultListableBeanFactory.registerBeanDefinition(dataSourceName + "_transaction", beanDefinitionBuilder.getRawBeanDefinition());
+            defaultListableBeanFactory.registerBeanDefinition(dataSourceName + "&transaction", beanDefinitionBuilder.getRawBeanDefinition());
         }
         return null;
     }
