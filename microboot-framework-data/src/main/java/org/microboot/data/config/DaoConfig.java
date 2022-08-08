@@ -5,6 +5,7 @@ import com.google.common.collect.Maps;
 import freemarker.cache.MruCacheStorage;
 import freemarker.ext.beans.BeansWrapperBuilder;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.microboot.core.bean.ApplicationContextHolder;
 import org.microboot.core.constant.Constant;
@@ -13,16 +14,22 @@ import org.microboot.data.basedao.BaseDao;
 import org.microboot.data.factory.DataSourceFactory;
 import org.microboot.data.resolver.TemplateResolver;
 import org.microboot.data.runner.StartRunner;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.support.BeanDefinitionBuilder;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  * @author 胡鹏
@@ -120,6 +127,40 @@ public class DaoConfig {
             }
         }
         return dataSourceMap;
+    }
+
+    /**
+     * 动态事务管理器（其他库）
+     *
+     * @param dataSourceMap
+     * @return
+     */
+    @Bean
+    public Object dynamicDataSourceTransactionManager(@Qualifier(value = Constant.OTHERS_DATA_SOURCE) Map<String, DruidDataSource> dataSourceMap) {
+        if (MapUtils.isEmpty(dataSourceMap)) {
+            return null;
+        }
+
+        Set<String> names = dataSourceMap.keySet();
+
+        //将applicationContext转换为ConfigurableApplicationContext
+        ConfigurableApplicationContext configurableApplicationContext = (ConfigurableApplicationContext) ApplicationContextHolder.getApplicationContext();
+        //获取bean工厂并转换为DefaultListableBeanFactory
+        DefaultListableBeanFactory defaultListableBeanFactory = (DefaultListableBeanFactory) configurableApplicationContext.getBeanFactory();
+
+        for (String name : names) {
+            DruidDataSource druidDataSource = dataSourceMap.get(name);
+            if (druidDataSource == null) {
+                continue;
+            }
+            //通过BeanDefinitionBuilder创建bean定义
+            BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition(DataSourceTransactionManager.class);
+            //设置bean属性
+            beanDefinitionBuilder.addPropertyValue("dataSource", druidDataSource);
+            //注册bean
+            defaultListableBeanFactory.registerBeanDefinition(name + "_transaction", beanDefinitionBuilder.getRawBeanDefinition());
+        }
+        return null;
     }
 
     /**
