@@ -141,15 +141,15 @@ public class DaoConfig {
             return null;
         }
 
-        Set<String> names = dataSourceMap.keySet();
+        Set<String> dataSourceNames = dataSourceMap.keySet();
 
         //将applicationContext转换为ConfigurableApplicationContext
         ConfigurableApplicationContext configurableApplicationContext = (ConfigurableApplicationContext) ApplicationContextHolder.getApplicationContext();
         //获取bean工厂并转换为DefaultListableBeanFactory
         DefaultListableBeanFactory defaultListableBeanFactory = (DefaultListableBeanFactory) configurableApplicationContext.getBeanFactory();
 
-        for (String name : names) {
-            DruidDataSource druidDataSource = dataSourceMap.get(name);
+        for (String dataSourceName : dataSourceNames) {
+            DruidDataSource druidDataSource = dataSourceMap.get(dataSourceName);
             if (druidDataSource == null) {
                 continue;
             }
@@ -158,7 +158,7 @@ public class DaoConfig {
             //设置bean属性
             beanDefinitionBuilder.addPropertyValue("dataSource", druidDataSource);
             //注册bean
-            defaultListableBeanFactory.registerBeanDefinition(name + "_transaction", beanDefinitionBuilder.getRawBeanDefinition());
+            defaultListableBeanFactory.registerBeanDefinition(dataSourceName + "_transaction", beanDefinitionBuilder.getRawBeanDefinition());
         }
         return null;
     }
