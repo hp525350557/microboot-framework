@@ -14,7 +14,6 @@ import org.microboot.data.basedao.BaseDao;
 import org.microboot.data.factory.DataSourceFactory;
 import org.microboot.data.resolver.TemplateResolver;
 import org.microboot.data.runner.StartRunner;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
@@ -126,41 +125,11 @@ public class DaoConfig {
                 putDataSourceMap(dataSourceMap, druidDataSource);
             }
         }
+
+        //动态构建事务管理器
+        this.dynamicTransactionManager(dataSourceMap);
+
         return dataSourceMap;
-    }
-
-    /**
-     * 动态事务管理器（其他库）
-     *
-     * @param dataSourceMap
-     * @return
-     */
-    @Bean
-    public Object dynamicDataSourceTransactionManager(@Qualifier(value = Constant.OTHERS_DATA_SOURCE) Map<String, DruidDataSource> dataSourceMap) {
-        if (MapUtils.isEmpty(dataSourceMap)) {
-            return null;
-        }
-
-        Set<String> dataSourceNames = dataSourceMap.keySet();
-
-        //将applicationContext转换为ConfigurableApplicationContext
-        ConfigurableApplicationContext configurableApplicationContext = (ConfigurableApplicationContext) ApplicationContextHolder.getApplicationContext();
-        //获取bean工厂并转换为DefaultListableBeanFactory
-        DefaultListableBeanFactory defaultListableBeanFactory = (DefaultListableBeanFactory) configurableApplicationContext.getBeanFactory();
-
-        for (String dataSourceName : dataSourceNames) {
-            DruidDataSource druidDataSource = dataSourceMap.get(dataSourceName);
-            if (druidDataSource == null) {
-                continue;
-            }
-            //通过BeanDefinitionBuilder创建bean定义
-            BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition(DataSourceTransactionManager.class);
-            //设置bean属性
-            beanDefinitionBuilder.addPropertyValue("dataSource", druidDataSource);
-            //注册bean
-            defaultListableBeanFactory.registerBeanDefinition(dataSourceName + "&transactionManager", beanDefinitionBuilder.getRawBeanDefinition());
-        }
-        return null;
     }
 
     /**
@@ -250,5 +219,37 @@ public class DaoConfig {
             return;
         }
         dataSourceMap.put(name, druidDataSource);
+    }
+
+    /**
+     * 动态事务管理器（其他库）
+     *
+     * @param dataSourceMap
+     * @return
+     */
+    private void dynamicTransactionManager(Map<String, DruidDataSource> dataSourceMap) {
+        if (MapUtils.isEmpty(dataSourceMap)) {
+            return;
+        }
+
+        Set<String> dataSourceNames = dataSourceMap.keySet();
+
+        //将applicationContext转换为ConfigurableApplicationContext
+        ConfigurableApplicationContext configurableApplicationContext = (ConfigurableApplicationContext) ApplicationContextHolder.getApplicationContext();
+        //获取bean工厂并转换为DefaultListableBeanFactory
+        DefaultListableBeanFactory defaultListableBeanFactory = (DefaultListableBeanFactory) configurableApplicationContext.getBeanFactory();
+
+        for (String dataSourceName : dataSourceNames) {
+            DruidDataSource druidDataSource = dataSourceMap.get(dataSourceName);
+            if (druidDataSource == null) {
+                continue;
+            }
+            //通过BeanDefinitionBuilder创建bean定义
+            BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition(DataSourceTransactionManager.class);
+            //设置bean属性
+            beanDefinitionBuilder.addPropertyValue("dataSource", druidDataSource);
+            //注册bean
+            defaultListableBeanFactory.registerBeanDefinition(dataSourceName + "&transactionManager", beanDefinitionBuilder.getRawBeanDefinition());
+        }
     }
 }
