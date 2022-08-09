@@ -21,8 +21,10 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
+import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.transaction.PlatformTransactionManager;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -69,6 +71,22 @@ public class DaoConfig {
     public DruidDataSource initMasterDataSource() {
         Map<String, Object> master = ApplicationContextHolder.getBean(DataSourceFactory.class).getMaster();
         return ApplicationContextHolder.getBean(DataSourceFactory.class).createDataSource(master);
+    }
+
+    /**
+     * 定义默认的事务管理器
+     * 不手动创建，SpringBoot会自动帮我们创建，但是不会添加@Primary
+     * 会导致@Transaction找不到默认事务管理器
+     *
+     * @return
+     */
+    @Bean
+    @Primary
+    public PlatformTransactionManager transactionManager() {
+        DruidDataSource druidDataSource = ApplicationContextHolder.getBean(Constant.MASTER_DATA_SOURCE, DruidDataSource.class);
+        DataSourceTransactionManager dataSourceTransactionManager = new DataSourceTransactionManager(druidDataSource);
+        dataSourceTransactionManager.setNestedTransactionAllowed(true);
+        return dataSourceTransactionManager;
     }
 
     /**
