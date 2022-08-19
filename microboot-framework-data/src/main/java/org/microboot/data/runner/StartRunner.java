@@ -14,8 +14,10 @@ import org.microboot.data.container.DataContainer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.jta.atomikos.AtomikosDataSourceBean;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
+import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -44,8 +46,8 @@ public class StartRunner implements ApplicationRunner {
     @SuppressWarnings("unchecked")
     @Override
     public void run(ApplicationArguments args) throws SQLException {
-        Map<String, DruidDataSource> slavesDataSourceMap = (Map<String, DruidDataSource>) ApplicationContextHolder.getBean(Constant.SLAVES_DATA_SOURCE);
-        Map<String, DruidDataSource> othersDataSourceMap = (Map<String, DruidDataSource>) ApplicationContextHolder.getBean(Constant.OTHERS_DATA_SOURCE);
+        Map<String, DataSource> slavesDataSourceMap = (Map<String, DataSource>) ApplicationContextHolder.getBean(Constant.SLAVES_DATA_SOURCE);
+        Map<String, DataSource> othersDataSourceMap = (Map<String, DataSource>) ApplicationContextHolder.getBean(Constant.OTHERS_DATA_SOURCE);
         for (String name : slavesDataSourceMap.keySet()) {
             DataContainer.slavesMap.put(name, new NamedParameterJdbcTemplate(slavesDataSourceMap.get(name)));
         }
@@ -53,8 +55,14 @@ public class StartRunner implements ApplicationRunner {
             DataContainer.othersMap.put(name, new NamedParameterJdbcTemplate(othersDataSourceMap.get(name)));
         }
         //如果主从连接同一个库，则不需要开启退避
-        DruidDataSource masterDataSource = ApplicationContextHolder.getBean(Constant.MASTER_DATA_SOURCE, DruidDataSource.class);
-        if (slavesDataSourceMap.size() == 1 && slavesDataSourceMap.containsKey(masterDataSource.getName())) {
+        DataSource dataSource = ApplicationContextHolder.getBean(Constant.MASTER_DATA_SOURCE, DataSource.class);
+        String dataSourceName;
+        if (dataSource instanceof DruidDataSource) {
+            dataSourceName = ((DruidDataSource) dataSource).getName();
+        } else {
+            dataSourceName = ((AtomikosDataSourceBean) dataSource).getUniqueResourceName();
+        }
+        if (slavesDataSourceMap.size() == 1 && slavesDataSourceMap.containsKey(dataSourceName)) {
             return;
         }
         DataContainer.initMap.putAll(DataContainer.slavesMap);

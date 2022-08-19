@@ -5,19 +5,17 @@ import com.google.common.collect.Maps;
 import freemarker.cache.MruCacheStorage;
 import freemarker.ext.beans.BeansWrapperBuilder;
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.microboot.core.bean.ApplicationContextHolder;
 import org.microboot.core.constant.Constant;
 import org.microboot.data.aspect.ClearThreadLocalAspect;
 import org.microboot.data.basedao.BaseDao;
 import org.microboot.data.factory.DataSourceFactory;
+import org.microboot.data.processor.DataSourceBeanPostProcessor;
 import org.microboot.data.resolver.TemplateResolver;
 import org.microboot.data.runner.StartRunner;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.beans.factory.support.BeanDefinitionBuilder;
-import org.springframework.beans.factory.support.DefaultListableBeanFactory;
-import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.boot.jta.atomikos.AtomikosDataSourceBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
@@ -26,11 +24,11 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.PlatformTransactionManager;
 
+import javax.sql.DataSource;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 
 /**
  * @author 胡鹏
@@ -41,6 +39,9 @@ public class DaoConfig {
 
     @Value("${datasource.macro:}")
     private String macro;
+
+    @Value("${datasource.enableXA:false}")
+    private boolean enableXA;
 
     /**
      * 初始化ClearThreadLocalAspect
@@ -63,30 +64,18 @@ public class DaoConfig {
     }
 
     /**
-     * 初始化DruidDataSource（主库）
+     * 初始化DataSource（主库）
      *
      * @return
      */
-    @Bean(name = Constant.MASTER_DATA_SOURCE)
-    public DruidDataSource initMasterDataSource() {
-        Map<String, Object> master = ApplicationContextHolder.getBean(DataSourceFactory.class).getMaster();
-        return ApplicationContextHolder.getBean(DataSourceFactory.class).createDataSource(master);
-    }
-
-    /**
-     * 定义默认的事务管理器
-     * 不手动创建，SpringBoot会自动帮我们创建，但是不会添加@Primary
-     * 会导致@Transaction找不到默认事务管理器
-     *
-     * @return
-     */
-    @Bean
     @Primary
-    public PlatformTransactionManager transactionManager() {
-        DruidDataSource druidDataSource = ApplicationContextHolder.getBean(Constant.MASTER_DATA_SOURCE, DruidDataSource.class);
-        DataSourceTransactionManager dataSourceTransactionManager = new DataSourceTransactionManager(druidDataSource);
-        dataSourceTransactionManager.setNestedTransactionAllowed(true);
-        return dataSourceTransactionManager;
+    @Bean(name = Constant.MASTER_DATA_SOURCE)
+    public DataSource initMasterDataSource() {
+        Map<String, Object> master = ApplicationContextHolder.getBean(DataSourceFactory.class).getMaster();
+        DruidDataSource dataSource = ApplicationContextHolder.getBean(DataSourceFactory.class).createDataSource(master);
+        AtomikosDataSourceBean atomikosDataSource = ApplicationContextHolder.getBean(DataSourceFactory.class).createAtomikosDataSourceBean(dataSource);
+        if (atomikosDataSource != null) return atomikosDataSource;
+        return dataSource;
     }
 
     /**
@@ -96,41 +85,68 @@ public class DaoConfig {
      */
     @Bean(name = Constant.MASTER_JDBC_TEMPLATE)
     public NamedParameterJdbcTemplate initMasterJdbcTemplate() {
-        DruidDataSource druidDataSource = ApplicationContextHolder.getBean(Constant.MASTER_DATA_SOURCE, DruidDataSource.class);
-        return new NamedParameterJdbcTemplate(druidDataSource);
+        DataSource dataSource = ApplicationContextHolder.getBean(Constant.MASTER_DATA_SOURCE, DataSource.class);
+        return new NamedParameterJdbcTemplate(dataSource);
     }
 
     /**
-     * 初始化Map<String, DruidDataSource>（从库）
+     * 如果enableXA为false，表示关闭分布式事务
+     * 那么需要手动创建事务管理器，主要是为了在方法上标注@Primary，即：默认事务管理器是
+     * 如果没有默认的事务管理器，SpringBoot也会自动帮我们创建，但是不会添加@Primary
+     * 但当配置有other数据源时，会导致@Transaction找不到默认事务管理器
+     *
+     * @return
+     */
+    @Primary
+    @Bean(name = "transactionManager")
+    public PlatformTransactionManager initPlatformTransactionManager() {
+        if (enableXA) return null;
+        DataSource dataSource = ApplicationContextHolder.getBean(Constant.MASTER_DATA_SOURCE, DataSource.class);
+        DataSourceTransactionManager dataSourceTransactionManager = new DataSourceTransactionManager(dataSource);
+        dataSourceTransactionManager.setNestedTransactionAllowed(true);
+        return dataSourceTransactionManager;
+    }
+
+    /**
+     * 初始化Map<String, DataSource>（从库）
      *
      * @return
      */
     @Bean(value = Constant.SLAVES_DATA_SOURCE)
-    public Map<String, DruidDataSource> initSlavesDataSource() {
-        Map<String, DruidDataSource> dataSourceMap = Maps.newHashMap();
+    public Map<String, DataSource> initSlavesDataSource() {
+        Map<String, DataSource> dataSourceMap = Maps.newHashMap();
         List<Map<String, Object>> slaves = ApplicationContextHolder.getBean(DataSourceFactory.class).getSlaves();
         if (CollectionUtils.isEmpty(slaves)) {
             //如果未定义从库，则主从用同一个数据源
-            DruidDataSource druidDataSource = ApplicationContextHolder.getBean(Constant.MASTER_DATA_SOURCE, DruidDataSource.class);
-            putDataSourceMap(dataSourceMap, druidDataSource);
+            DataSource dataSource = ApplicationContextHolder.getBean(Constant.MASTER_DATA_SOURCE, DataSource.class);
+            if (dataSource instanceof DruidDataSource) {
+                putDataSourceMap(dataSourceMap, ((DruidDataSource) dataSource).getName(), dataSource);
+            } else {
+                putDataSourceMap(dataSourceMap, ((AtomikosDataSourceBean) dataSource).getUniqueResourceName(), dataSource);
+            }
         } else {
             //如果定义了从库，则主从分离，主数据库用来写，从数据库用来读
             for (Map<String, Object> slave : slaves) {
-                DruidDataSource druidDataSource = ApplicationContextHolder.getBean(DataSourceFactory.class).createDataSource(slave);
-                putDataSourceMap(dataSourceMap, druidDataSource);
+                DruidDataSource dataSource = ApplicationContextHolder.getBean(DataSourceFactory.class).createDataSource(slave);
+                AtomikosDataSourceBean atomikosDataSource = ApplicationContextHolder.getBean(DataSourceFactory.class).createAtomikosDataSourceBean(dataSource);
+                if (atomikosDataSource != null) {
+                    putDataSourceMap(dataSourceMap, atomikosDataSource.getUniqueResourceName(), atomikosDataSource);
+                    continue;
+                }
+                putDataSourceMap(dataSourceMap, dataSource.getName(), dataSource);
             }
         }
         return dataSourceMap;
     }
 
     /**
-     * 初始化Map<String, DruidDataSource>（其他库）
+     * 初始化Map<String, DataSource>（其他库）
      *
      * @return
      */
     @Bean(value = Constant.OTHERS_DATA_SOURCE)
-    public Map<String, DruidDataSource> initOthersDataSource() {
-        Map<String, DruidDataSource> dataSourceMap = Maps.newHashMap();
+    public Map<String, DataSource> initOthersDataSource() {
+        Map<String, DataSource> dataSourceMap = Maps.newHashMap();
         List<Map<String, Object>> others = ApplicationContextHolder.getBean(DataSourceFactory.class).getOthers();
         if (CollectionUtils.isEmpty(others)) {
             //如果未定义其他库，则返回空的dataSourceMap
@@ -138,16 +154,27 @@ public class DaoConfig {
         } else {
             //如果定义了其他库，则构建其他库连接池
             for (Map<String, Object> other : others) {
-                //连接池名
-                DruidDataSource druidDataSource = ApplicationContextHolder.getBean(DataSourceFactory.class).createDataSource(other);
-                putDataSourceMap(dataSourceMap, druidDataSource);
+                DruidDataSource dataSource = ApplicationContextHolder.getBean(DataSourceFactory.class).createDataSource(other);
+                AtomikosDataSourceBean atomikosDataSource = ApplicationContextHolder.getBean(DataSourceFactory.class).createAtomikosDataSourceBean(dataSource);
+                if (atomikosDataSource != null) {
+                    putDataSourceMap(dataSourceMap, atomikosDataSource.getUniqueResourceName(), atomikosDataSource);
+                    continue;
+                }
+                putDataSourceMap(dataSourceMap, dataSource.getName(), dataSource);
             }
         }
-
-        //动态构建事务管理器
-        this.dynamicTransactionManager(dataSourceMap);
-
         return dataSourceMap;
+    }
+
+    /**
+     * 初始化DataSourceBeanPostProcessor
+     *
+     * @return
+     */
+    @Bean
+    public DataSourceBeanPostProcessor initDataSourceBeanPostProcessor() {
+        if (enableXA) return null;
+        return new DataSourceBeanPostProcessor();
     }
 
     /**
@@ -229,45 +256,13 @@ public class DaoConfig {
      * 组装dataSourceMap
      *
      * @param dataSourceMap
-     * @param druidDataSource
+     * @param name
+     * @param dataSource
      */
-    private void putDataSourceMap(Map<String, DruidDataSource> dataSourceMap, DruidDataSource druidDataSource) {
-        String name = druidDataSource.getName();
-        if (StringUtils.isBlank(name)) {
+    private void putDataSourceMap(Map<String, DataSource> dataSourceMap, String name, DataSource dataSource) {
+        if (StringUtils.isBlank(name) || dataSource == null) {
             return;
         }
-        dataSourceMap.put(name, druidDataSource);
-    }
-
-    /**
-     * 动态事务管理器（其他库）
-     *
-     * @param dataSourceMap
-     * @return
-     */
-    private void dynamicTransactionManager(Map<String, DruidDataSource> dataSourceMap) {
-        if (MapUtils.isEmpty(dataSourceMap)) {
-            return;
-        }
-
-        Set<String> dataSourceNames = dataSourceMap.keySet();
-
-        //将applicationContext转换为ConfigurableApplicationContext
-        ConfigurableApplicationContext configurableApplicationContext = (ConfigurableApplicationContext) ApplicationContextHolder.getApplicationContext();
-        //获取bean工厂并转换为DefaultListableBeanFactory
-        DefaultListableBeanFactory defaultListableBeanFactory = (DefaultListableBeanFactory) configurableApplicationContext.getBeanFactory();
-
-        for (String dataSourceName : dataSourceNames) {
-            DruidDataSource druidDataSource = dataSourceMap.get(dataSourceName);
-            if (druidDataSource == null) {
-                continue;
-            }
-            //通过BeanDefinitionBuilder创建bean定义
-            BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition(DataSourceTransactionManager.class);
-            //设置bean属性
-            beanDefinitionBuilder.addPropertyValue("dataSource", druidDataSource);
-            //注册bean
-            defaultListableBeanFactory.registerBeanDefinition(dataSourceName + "&transactionManager", beanDefinitionBuilder.getRawBeanDefinition());
-        }
+        dataSourceMap.put(name, dataSource);
     }
 }
