@@ -14,7 +14,6 @@ import org.microboot.data.factory.DataSourceFactory;
 import org.microboot.data.processor.DataSourceBeanPostProcessor;
 import org.microboot.data.resolver.TemplateResolver;
 import org.microboot.data.runner.StartRunner;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.jta.atomikos.AtomikosDataSourceBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -36,12 +35,6 @@ import java.util.Properties;
 @Configuration
 @DependsOn(Constant.APPLICATION_CONTEXT_HOLDER)
 public class DaoConfig {
-
-    @Value("${datasource.macro:}")
-    private String macro;
-
-    @Value("${datasource.enableXA:false}")
-    private boolean enableXA;
 
     /**
      * 初始化ClearThreadLocalAspect
@@ -66,14 +59,15 @@ public class DaoConfig {
     /**
      * 初始化DataSource（主库）
      *
+     * @param dataSourceFactory
      * @return
      */
     @Primary
     @Bean(name = Constant.MASTER_DATA_SOURCE)
-    public DataSource initMasterDataSource() {
-        Map<String, Object> master = ApplicationContextHolder.getBean(DataSourceFactory.class).getMaster();
-        DruidDataSource dataSource = ApplicationContextHolder.getBean(DataSourceFactory.class).createDataSource(master);
-        AtomikosDataSourceBean atomikosDataSource = ApplicationContextHolder.getBean(DataSourceFactory.class).createAtomikosDataSourceBean(dataSource);
+    public DataSource initMasterDataSource(DataSourceFactory dataSourceFactory) {
+        Map<String, Object> master = dataSourceFactory.getMaster();
+        DruidDataSource dataSource = dataSourceFactory.createDataSource(master);
+        AtomikosDataSourceBean atomikosDataSource = dataSourceFactory.createAtomikosDataSourceBean(dataSource);
         if (atomikosDataSource != null) return atomikosDataSource;
         return dataSource;
     }
@@ -95,11 +89,13 @@ public class DaoConfig {
      * 如果没有默认的事务管理器，SpringBoot也会自动帮我们创建，但是不会添加@Primary
      * 但当配置有other数据源时，会导致@Transaction找不到默认事务管理器
      *
+     * @param dataSourceFactory
      * @return
      */
     @Primary
     @Bean(name = "transactionManager")
-    public PlatformTransactionManager initPlatformTransactionManager() {
+    public PlatformTransactionManager initPlatformTransactionManager(DataSourceFactory dataSourceFactory) {
+        boolean enableXA = dataSourceFactory.isEnableXA();
         if (enableXA) return null;
         DataSource dataSource = ApplicationContextHolder.getBean(Constant.MASTER_DATA_SOURCE, DataSource.class);
         DataSourceTransactionManager dataSourceTransactionManager = new DataSourceTransactionManager(dataSource);
@@ -110,12 +106,13 @@ public class DaoConfig {
     /**
      * 初始化Map<String, DataSource>（从库）
      *
+     * @param dataSourceFactory
      * @return
      */
     @Bean(value = Constant.SLAVES_DATA_SOURCE)
-    public Map<String, DataSource> initSlavesDataSource() {
+    public Map<String, DataSource> initSlavesDataSource(DataSourceFactory dataSourceFactory) {
         Map<String, DataSource> dataSourceMap = Maps.newHashMap();
-        List<Map<String, Object>> slaves = ApplicationContextHolder.getBean(DataSourceFactory.class).getSlaves();
+        List<Map<String, Object>> slaves = dataSourceFactory.getSlaves();
         if (CollectionUtils.isEmpty(slaves)) {
             //如果未定义从库，则主从用同一个数据源
             DataSource dataSource = ApplicationContextHolder.getBean(Constant.MASTER_DATA_SOURCE, DataSource.class);
@@ -123,8 +120,8 @@ public class DaoConfig {
         } else {
             //如果定义了从库，则主从分离，主数据库用来写，从数据库用来读
             for (Map<String, Object> slave : slaves) {
-                DruidDataSource dataSource = ApplicationContextHolder.getBean(DataSourceFactory.class).createDataSource(slave);
-                AtomikosDataSourceBean atomikosDataSource = ApplicationContextHolder.getBean(DataSourceFactory.class).createAtomikosDataSourceBean(dataSource);
+                DruidDataSource dataSource = dataSourceFactory.createDataSource(slave);
+                AtomikosDataSourceBean atomikosDataSource = dataSourceFactory.createAtomikosDataSourceBean(dataSource);
                 if (atomikosDataSource != null) {
                     putDataSourceMap(dataSourceMap, atomikosDataSource);
                     continue;
@@ -138,20 +135,21 @@ public class DaoConfig {
     /**
      * 初始化Map<String, DataSource>（其他库）
      *
+     * @param dataSourceFactory
      * @return
      */
     @Bean(value = Constant.OTHERS_DATA_SOURCE)
-    public Map<String, DataSource> initOthersDataSource() {
+    public Map<String, DataSource> initOthersDataSource(DataSourceFactory dataSourceFactory) {
         Map<String, DataSource> dataSourceMap = Maps.newHashMap();
-        List<Map<String, Object>> others = ApplicationContextHolder.getBean(DataSourceFactory.class).getOthers();
+        List<Map<String, Object>> others = dataSourceFactory.getOthers();
         if (CollectionUtils.isEmpty(others)) {
             //如果未定义其他库，则返回空的dataSourceMap
             return dataSourceMap;
         } else {
             //如果定义了其他库，则构建其他库连接池
             for (Map<String, Object> other : others) {
-                DruidDataSource dataSource = ApplicationContextHolder.getBean(DataSourceFactory.class).createDataSource(other);
-                AtomikosDataSourceBean atomikosDataSource = ApplicationContextHolder.getBean(DataSourceFactory.class).createAtomikosDataSourceBean(dataSource);
+                DruidDataSource dataSource = dataSourceFactory.createDataSource(other);
+                AtomikosDataSourceBean atomikosDataSource = dataSourceFactory.createAtomikosDataSourceBean(dataSource);
                 if (atomikosDataSource != null) {
                     putDataSourceMap(dataSourceMap, atomikosDataSource);
                     continue;
@@ -165,10 +163,12 @@ public class DaoConfig {
     /**
      * 初始化DataSourceBeanPostProcessor
      *
+     * @param dataSourceFactory
      * @return
      */
     @Bean
-    public DataSourceBeanPostProcessor initDataSourceBeanPostProcessor() {
+    public DataSourceBeanPostProcessor initDataSourceBeanPostProcessor(DataSourceFactory dataSourceFactory) {
+        boolean enableXA = dataSourceFactory.isEnableXA();
         if (enableXA) return null;
         return new DataSourceBeanPostProcessor();
     }
@@ -186,11 +186,12 @@ public class DaoConfig {
     /**
      * 初始化freemarker.template.Configuration
      *
+     * @param dataSourceFactory
      * @return
      * @throws Exception
      */
     @Bean(name = Constant.FREEMARKER_CONFIGURATION)
-    public freemarker.template.Configuration initConfiguration() throws Exception {
+    public freemarker.template.Configuration initConfiguration(DataSourceFactory dataSourceFactory) throws Exception {
         freemarker.template.Configuration configuration = new freemarker.template.Configuration(freemarker.template.Configuration.VERSION_2_3_24);
         configuration.setCacheStorage(new MruCacheStorage(0, Integer.MAX_VALUE));
         configuration.setDefaultEncoding(StandardCharsets.UTF_8.name());
@@ -207,6 +208,7 @@ public class DaoConfig {
             所以此时autoImport的value是freemarker模板文件加载到内存后的key值，如下：
             autoImport.put("macro", "macro"); value值的macro是模板加载时的templateKey
 		 */
+        String macro = dataSourceFactory.getMacro();
         if (StringUtils.isNotBlank(macro)) {
             Map<String, Object> autoImport = Maps.newHashMap();
             autoImport.put("macro", macro);

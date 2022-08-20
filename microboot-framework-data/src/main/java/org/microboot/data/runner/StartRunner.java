@@ -11,7 +11,7 @@ import org.microboot.core.bean.ApplicationContextHolder;
 import org.microboot.core.constant.Constant;
 import org.microboot.core.utils.LoggerUtils;
 import org.microboot.data.container.DataContainer;
-import org.springframework.beans.factory.annotation.Value;
+import org.microboot.data.factory.DataSourceFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.jta.atomikos.AtomikosDataSourceBean;
@@ -32,16 +32,17 @@ public class StartRunner implements ApplicationRunner {
 
     private final Logger logger = LogManager.getLogger(this.getClass());
 
-    @Value("${datasource.backoffTimeDelay:0}")
-    private long backoffTimeDelay;
-    @Value("${datasource.backoffTimePeriod:10000}")
-    private long backoffTimePeriod;
-    @Value("${datasource.backoffTimeLimit:10000}")
-    private long backoffTimeLimit;
-    @Value("${datasource.backoffTimeLimitMax:3600000}")
-    private long backoffTimeLimitMax;
-    @Value("${datasource.backoffTimeLimitStep:2}")
-    private int backoffTimeLimitStep;
+    private final DataSourceFactory dataSourceFactory = ApplicationContextHolder.getBean(DataSourceFactory.class);
+
+    private final long backoffTimeDelay = dataSourceFactory.getBackoffTimeDelay();
+
+    private final long backoffTimePeriod = dataSourceFactory.getBackoffTimePeriod();
+
+    private final long backoffTimeLimit = dataSourceFactory.getBackoffTimeLimit();
+
+    private final long backoffTimeLimitMax = dataSourceFactory.getBackoffTimeLimitMax();
+
+    private final int backoffTimeLimitStep = dataSourceFactory.getBackoffTimeLimitStep();
 
     @SuppressWarnings("unchecked")
     @Override
