@@ -119,21 +119,17 @@ public class DaoConfig {
         if (CollectionUtils.isEmpty(slaves)) {
             //如果未定义从库，则主从用同一个数据源
             DataSource dataSource = ApplicationContextHolder.getBean(Constant.MASTER_DATA_SOURCE, DataSource.class);
-            if (dataSource instanceof DruidDataSource) {
-                putDataSourceMap(dataSourceMap, ((DruidDataSource) dataSource).getName(), dataSource);
-            } else {
-                putDataSourceMap(dataSourceMap, ((AtomikosDataSourceBean) dataSource).getUniqueResourceName(), dataSource);
-            }
+            putDataSourceMap(dataSourceMap, dataSource);
         } else {
             //如果定义了从库，则主从分离，主数据库用来写，从数据库用来读
             for (Map<String, Object> slave : slaves) {
                 DruidDataSource dataSource = ApplicationContextHolder.getBean(DataSourceFactory.class).createDataSource(slave);
                 AtomikosDataSourceBean atomikosDataSource = ApplicationContextHolder.getBean(DataSourceFactory.class).createAtomikosDataSourceBean(dataSource);
                 if (atomikosDataSource != null) {
-                    putDataSourceMap(dataSourceMap, atomikosDataSource.getUniqueResourceName(), atomikosDataSource);
+                    putDataSourceMap(dataSourceMap, atomikosDataSource);
                     continue;
                 }
-                putDataSourceMap(dataSourceMap, dataSource.getName(), dataSource);
+                putDataSourceMap(dataSourceMap, dataSource);
             }
         }
         return dataSourceMap;
@@ -157,10 +153,10 @@ public class DaoConfig {
                 DruidDataSource dataSource = ApplicationContextHolder.getBean(DataSourceFactory.class).createDataSource(other);
                 AtomikosDataSourceBean atomikosDataSource = ApplicationContextHolder.getBean(DataSourceFactory.class).createAtomikosDataSourceBean(dataSource);
                 if (atomikosDataSource != null) {
-                    putDataSourceMap(dataSourceMap, atomikosDataSource.getUniqueResourceName(), atomikosDataSource);
+                    putDataSourceMap(dataSourceMap, atomikosDataSource);
                     continue;
                 }
-                putDataSourceMap(dataSourceMap, dataSource.getName(), dataSource);
+                putDataSourceMap(dataSourceMap, dataSource);
             }
         }
         return dataSourceMap;
@@ -256,13 +252,17 @@ public class DaoConfig {
      * 组装dataSourceMap
      *
      * @param dataSourceMap
-     * @param name
      * @param dataSource
      */
-    private void putDataSourceMap(Map<String, DataSource> dataSourceMap, String name, DataSource dataSource) {
-        if (StringUtils.isBlank(name) || dataSource == null) {
+    private void putDataSourceMap(Map<String, DataSource> dataSourceMap, DataSource dataSource) {
+        if (dataSource == null) {
             return;
         }
-        dataSourceMap.put(name, dataSource);
+        if (dataSource instanceof DruidDataSource) {
+            dataSourceMap.put(((DruidDataSource) dataSource).getName(), dataSource);
+        }
+        if (dataSource instanceof AtomikosDataSourceBean) {
+            dataSourceMap.put(((AtomikosDataSourceBean) dataSource).getUniqueResourceName(), dataSource);
+        }
     }
 }
