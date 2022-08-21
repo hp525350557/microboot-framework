@@ -46,6 +46,8 @@ public class DataSourcePostProcessor implements InitializingBean {
     //获取bean工厂并转换为DefaultListableBeanFactory
     private final DefaultListableBeanFactory defaultListableBeanFactory = (DefaultListableBeanFactory) configurableApplicationContext.getBeanFactory();
 
+    private final String transactionManagerPrefix = "transactionManager";
+
     @Override
     public void afterPropertiesSet() throws Exception {
         DataSource dataSource = ApplicationContextHolder.getBean(Constant.MASTER_DATA_SOURCE, DataSource.class);
@@ -72,7 +74,7 @@ public class DataSourcePostProcessor implements InitializingBean {
         //设置bean属性
         beanDefinitionBuilder.addPropertyValue("nestedTransactionAllowed", true);
         //注册bean
-        defaultListableBeanFactory.registerBeanDefinition("transactionManager", beanDefinitionBuilder.getRawBeanDefinition());
+        defaultListableBeanFactory.registerBeanDefinition(transactionManagerPrefix, beanDefinitionBuilder.getRawBeanDefinition());
     }
 
     /**
@@ -99,7 +101,7 @@ public class DataSourcePostProcessor implements InitializingBean {
                 //设置bean属性
                 beanDefinitionBuilder.addPropertyValue("dataSource", dataSource);
                 //注册bean
-                defaultListableBeanFactory.registerBeanDefinition(DataSourceTransactionManager.class.getName() + '$' + dataSourceName, beanDefinitionBuilder.getRawBeanDefinition());
+                defaultListableBeanFactory.registerBeanDefinition(transactionManagerPrefix + '&' + dataSourceName, beanDefinitionBuilder.getRawBeanDefinition());
             }
         }
     }
