@@ -39,13 +39,40 @@ import java.util.Set;
  * 注意：在BeanFactoryPostProcessor和BeanDefinitionRegistryPostProcessor无法获取我们定义的Bean实例
  * 因为此时还没有实例化
  */
-public class DataSourceBeanPostProcessor implements InitializingBean {
+public class DataSourcePostProcessor implements InitializingBean {
+
+    //将applicationContext转换为ConfigurableApplicationContext
+    private final ConfigurableApplicationContext configurableApplicationContext = (ConfigurableApplicationContext) ApplicationContextHolder.getApplicationContext();
+    //获取bean工厂并转换为DefaultListableBeanFactory
+    private final DefaultListableBeanFactory defaultListableBeanFactory = (DefaultListableBeanFactory) configurableApplicationContext.getBeanFactory();
 
     @Override
     public void afterPropertiesSet() throws Exception {
+        DataSource dataSource = ApplicationContextHolder.getBean(Constant.MASTER_DATA_SOURCE, DataSource.class);
+        //默认事务管理器
+        defaultTransactionManager(dataSource);
+
         Map<String, DataSource> othersDataSourceMap = (Map<String, DataSource>) ApplicationContextHolder.getBean(Constant.OTHERS_DATA_SOURCE);
-        //动态构建事务管理器
+        //动态事务管理器
         this.dynamicTransactionManager(othersDataSourceMap);
+    }
+
+    /**
+     * 默认事务管理器
+     *
+     * @param dataSource
+     */
+    private void defaultTransactionManager(DataSource dataSource) {
+        //通过BeanDefinitionBuilder创建bean定义
+        BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition(DataSourceTransactionManager.class);
+        //设置为默认事务管理器
+        beanDefinitionBuilder.setPrimary(true);
+        //设置bean属性
+        beanDefinitionBuilder.addPropertyValue("dataSource", dataSource);
+        //设置bean属性
+        beanDefinitionBuilder.addPropertyValue("nestedTransactionAllowed", true);
+        //注册bean
+        defaultListableBeanFactory.registerBeanDefinition("transactionManager", beanDefinitionBuilder.getRawBeanDefinition());
     }
 
     /**
@@ -58,11 +85,6 @@ public class DataSourceBeanPostProcessor implements InitializingBean {
         if (MapUtils.isEmpty(dataSourceMap)) {
             return;
         }
-
-        //将applicationContext转换为ConfigurableApplicationContext
-        ConfigurableApplicationContext configurableApplicationContext = (ConfigurableApplicationContext) ApplicationContextHolder.getApplicationContext();
-        //获取bean工厂并转换为DefaultListableBeanFactory
-        DefaultListableBeanFactory defaultListableBeanFactory = (DefaultListableBeanFactory) configurableApplicationContext.getBeanFactory();
 
         Set<String> dataSourceNames = dataSourceMap.keySet();
 

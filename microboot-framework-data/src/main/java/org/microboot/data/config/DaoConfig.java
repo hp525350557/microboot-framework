@@ -1,9 +1,6 @@
 package org.microboot.data.config;
 
 import com.alibaba.druid.pool.DruidDataSource;
-import com.atomikos.icatch.config.UserTransactionService;
-import com.atomikos.icatch.config.UserTransactionServiceImp;
-import com.atomikos.icatch.jta.UserTransactionManager;
 import com.google.common.collect.Maps;
 import freemarker.cache.MruCacheStorage;
 import freemarker.ext.beans.BeansWrapperBuilder;
@@ -14,30 +11,17 @@ import org.microboot.core.constant.Constant;
 import org.microboot.data.aspect.ClearThreadLocalAspect;
 import org.microboot.data.basedao.BaseDao;
 import org.microboot.data.factory.DataSourceFactory;
-import org.microboot.data.processor.DataSourceBeanPostProcessor;
+import org.microboot.data.processor.DataSourcePostProcessor;
 import org.microboot.data.resolver.TemplateResolver;
 import org.microboot.data.runner.StartRunner;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.transaction.TransactionManagerCustomizers;
-import org.springframework.boot.autoconfigure.transaction.jta.JtaProperties;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.jta.atomikos.AtomikosDataSourceBean;
-import org.springframework.boot.jta.atomikos.AtomikosProperties;
-import org.springframework.boot.system.ApplicationHome;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.jdbc.datasource.DataSourceTransactionManager;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.jta.JtaTransactionManager;
 
 import javax.sql.DataSource;
-import javax.transaction.TransactionManager;
-import javax.transaction.UserTransaction;
-import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -47,7 +31,6 @@ import java.util.Properties;
  * @author 胡鹏
  */
 @Configuration
-@EnableConfigurationProperties({AtomikosProperties.class, JtaProperties.class})
 @DependsOn(Constant.APPLICATION_CONTEXT_HOLDER)
 public class DaoConfig {
 
@@ -155,83 +138,23 @@ public class DaoConfig {
         return dataSourceMap;
     }
 
-    /******************************************* 默认事务管理器【包含分布式事务管理器相关Bean】 start *******************************************/
-
-    @Bean(initMethod = "init", destroyMethod = "shutdownWait")
-    @ConditionalOnMissingBean(UserTransactionService.class)
-    public UserTransactionServiceImp userTransactionService(DataSourceFactory dataSourceFactory,
-                                                            AtomikosProperties atomikosProperties,
-                                                            JtaProperties jtaProperties) {
-        boolean enableXA = dataSourceFactory.isEnableXA();
-        if (!enableXA) {
-            return null;
-        }
-        Properties properties = new Properties();
-        if (org.springframework.util.StringUtils.hasText(jtaProperties.getTransactionManagerId())) {
-            properties.setProperty("com.atomikos.icatch.tm_unique_name", jtaProperties.getTransactionManagerId());
-        }
-        properties.setProperty("com.atomikos.icatch.log_base_dir", getLogBaseDir(jtaProperties));
-        properties.putAll(atomikosProperties.asProperties());
-        return new UserTransactionServiceImp(properties);
-    }
-
-    @Bean(initMethod = "init", destroyMethod = "close")
-    @ConditionalOnMissingBean(TransactionManager.class)
-    public UserTransactionManager atomikosTransactionManager(DataSourceFactory dataSourceFactory) throws Exception {
-        boolean enableXA = dataSourceFactory.isEnableXA();
-        if (!enableXA) {
-            return null;
-        }
-        UserTransactionManager manager = new UserTransactionManager();
-        manager.setStartupTransactionService(false);
-        manager.setForceShutdown(true);
-        return manager;
-    }
-
     /**
-     * 如果enableXA为false，表示关闭分布式事务
-     * 那么需要手动创建事务管理器，主要是为了在方法上标注@Primary，即：默认事务管理器是
-     * 如果没有默认的事务管理器，SpringBoot也会自动帮我们创建，但是不会添加@Primary
-     * 但当配置有other数据源时，会导致@Transaction找不到默认事务管理器
+     * 初始化DataSourcePostProcessor
      *
-     * 不用@ConditionalOnProperty，因为获取不到database.yml中的属性值
-     *
-     * @param dataSourceFactory
-     * @return
-     */
-    @Primary
-    @Bean(name = "transactionManager")
-    public PlatformTransactionManager initPlatformTransactionManager(DataSourceFactory dataSourceFactory,
-                                                                     UserTransaction userTransaction, TransactionManager transactionManager,
-                                                                     ObjectProvider<TransactionManagerCustomizers> transactionManagerCustomizers) {
-        boolean enableXA = dataSourceFactory.isEnableXA();
-        if (enableXA) {
-            JtaTransactionManager jtaTransactionManager = new JtaTransactionManager(userTransaction, transactionManager);
-            transactionManagerCustomizers.ifAvailable((customizers) -> customizers.customize(jtaTransactionManager));
-            return jtaTransactionManager;
-        }
-        DataSource dataSource = ApplicationContextHolder.getBean(Constant.MASTER_DATA_SOURCE, DataSource.class);
-        DataSourceTransactionManager dataSourceTransactionManager = new DataSourceTransactionManager(dataSource);
-        dataSourceTransactionManager.setNestedTransactionAllowed(true);
-        return dataSourceTransactionManager;
-    }
-
-    /**
-     * 初始化DataSourceBeanPostProcessor
-     *
-     * 不用@ConditionalOnProperty，因为获取不到database.yml中的属性值
+     * 尝试过的方法：
+     * 1、@ConditionalOnProperty，获取不到database.yml中的属性值【本意是不想把enableXA属性和database属性拆开到不同的配置文件中】
+     * 2、根据enableXA选择创建不同的事务管理器【JtaTransactionManager或DataSourceTransactionManager】，但冗余代码太多
+     * 3、尝试实现Condition接口或ConfigurationCondition接口，但如果在这些接口中使用DataSourceFactory，则会导致无法正确加载database.yml中的属性值
      *
      * @param dataSourceFactory
      * @return
      */
     @Bean
-    public DataSourceBeanPostProcessor initDataSourceBeanPostProcessor(DataSourceFactory dataSourceFactory) {
+    public DataSourcePostProcessor initDataSourcePostProcessor(DataSourceFactory dataSourceFactory) {
         boolean enableXA = dataSourceFactory.isEnableXA();
         if (enableXA) return null;
-        return new DataSourceBeanPostProcessor();
+        return new DataSourcePostProcessor();
     }
-
-    /******************************************* 默认事务管理器【包含分布式事务管理器相关Bean】 end *******************************************/
 
     /**
      * 初始化StartRunner
@@ -326,19 +249,5 @@ public class DaoConfig {
         if (dataSource instanceof AtomikosDataSourceBean) {
             dataSourceMap.put(((AtomikosDataSourceBean) dataSource).getUniqueResourceName(), dataSource);
         }
-    }
-
-    /**
-     * jta默认日志路径
-     *
-     * @param jtaProperties
-     * @return
-     */
-    private String getLogBaseDir(JtaProperties jtaProperties) {
-        if (org.springframework.util.StringUtils.hasLength(jtaProperties.getLogDir())) {
-            return jtaProperties.getLogDir();
-        }
-        File home = new ApplicationHome().getDir();
-        return new File(home, "transaction-logs").getAbsolutePath();
     }
 }
