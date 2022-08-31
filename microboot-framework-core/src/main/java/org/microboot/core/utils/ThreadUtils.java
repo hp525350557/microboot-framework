@@ -38,6 +38,8 @@ public class ThreadUtils {
             @Override
             public Thread newThread(Runnable runnable) {
                 Thread thread = new Thread(runnable, "Thread-" + threadNum.getAndIncrement());
+                //创建守护线程【主线程结束就结束】
+                thread.setDaemon(true);
                 thread.setUncaughtExceptionHandler((Thread t, Throwable e) -> {
                     /*
                         此处捕捉的是worker的异常，不是任务的异常
@@ -79,6 +81,8 @@ public class ThreadUtils {
             @Override
             public Thread newThread(Runnable runnable) {
                 Thread thread = new Thread(runnable, "Thread-" + threadNum.getAndIncrement());
+                //创建守护线程【主线程结束就结束】
+                thread.setDaemon(true);
                 thread.setUncaughtExceptionHandler((Thread t, Throwable e) -> {
                     /*
                         此处捕捉的是worker的异常，不是任务的异常
