@@ -13,6 +13,20 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author 胡鹏
+ *
+ * 这个工具类中有两个内部类，分别是InnerURLClassLoaderManager和InnerURLClassLoader
+ * InnerURLClassLoaderManager通过ConcurrentHashMap保存InnerURLClassLoader实例
+ * InnerURLClassLoader是真正用来加载jar包和class的加载器
+ * 步骤1：加载jar包
+ * 步骤2：加载指定jar包下的class类
+ *
+ * 方法名带ByCustom后缀加载的jar包可以卸载
+ * 方法名不带ByCustom的暂时没有提供卸载jar包的功能
+ * 【
+ * 测试过很多方案都不行，参考：https://www.cnblogs.com/diyunpeng/p/2391291.html
+ * 参考案例关注一下URLClassPath的内部类JarLoader的csu属性，它里面存了加载的jar包路径
+ * 这个方案看上去合理，但实验后还是不行，只是作为一个学习参考记录在这吧
+ * 】
  */
 public class JarLoadUtils {
 
@@ -93,16 +107,30 @@ public class JarLoadUtils {
             if (urlClassLoader != null) {
                 return;
             }
-            //注意，一个InnerURLClassLoader对象就对应一个Jar包
-            urlClassLoader = new InnerURLClassLoader();
+
+            InnerURLClassLoader innerURLClassLoader = new InnerURLClassLoader();
+
+            /*
+                执行到此处，说明LOADER_CACHE中还没有jar对应的InnerURLClassLoader对象
+                但有可能是多线程同时只能到此处，因此会存在并发问题
+                computeIfAbsent是线程安全的，在多线程下只有一个线程能成功将自己的innerURLClassLoader对象存入LOADER_CACHE并返回
+             */
+            urlClassLoader = LOADER_CACHE.computeIfAbsent(jar, j -> innerURLClassLoader);
+
+            //这里的判断是防止多线程场景下，重复加载jar包
+            if (urlClassLoader != innerURLClassLoader) {
+                return;
+            }
+
             /*
                 加载jar包的url固定写法：jar:file:/....!/
                 由于Linux系统的绝对路径是以“/”开头，所以会多一个“/”，导致URL读取不到JAR包
             */
             String newJar = PathUtils.regular(jar, true);
             URL jarUrl = new URL("jar:file:/" + newJar + "!/");
+
+            //一个InnerURLClassLoader对象就对应一个Jar包
             urlClassLoader.loadJar(jarUrl);
-            LOADER_CACHE.put(jar, urlClassLoader);
         }
 
         private void unloadJar(String jar) {
