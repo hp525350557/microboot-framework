@@ -81,19 +81,14 @@ public class ThreadUtils {
     }
 
     public static void shutdown() throws Exception {
-        if (executor.isShutdown()) {
-            return;
-        }
-
-        executor.shutdown();
-
-        if (!executor.awaitTermination(1, TimeUnit.DAYS)) {
-            executor.shutdownNow();
-            logger.info("====================所有线程执行完毕====================");
-        }
+        shutdown(1, TimeUnit.DAYS);
     }
 
     public static void shutdown(long timeout, TimeUnit unit) throws Exception {
+        if (executor == null) {
+            return;
+        }
+
         if (executor.isShutdown()) {
             return;
         }
@@ -104,5 +99,7 @@ public class ThreadUtils {
             executor.shutdownNow();
             logger.info("====================所有线程执行完毕====================");
         }
+
+        executor = null;
     }
 }
