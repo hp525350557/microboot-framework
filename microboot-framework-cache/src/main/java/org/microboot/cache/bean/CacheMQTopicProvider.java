@@ -16,17 +16,17 @@ public class CacheMQTopicProvider {
      * * 向默认队列发送消息
      * JmsTemplate交由SpringBoot自动装配，不再手动创建
      *
-     * @param hashCode
+     * @param uniqueId
      * @param key
      * @param value
      */
-    public void publish(final int hashCode, final Object key, final Object value) {
+    public void publish(final String uniqueId, final Object key, final Object value) {
         if (ApplicationContextHolder.getBean(JmsTemplate.class).getDefaultDestination() == null) {
             return;
         }
         ApplicationContextHolder.getBean(JmsTemplate.class).send(session -> {
             MapMessage mapMessage = session.createMapMessage();
-            mapMessage.setInt("hashCode", hashCode);
+            mapMessage.setString("uniqueId", uniqueId);
             if (key != null) {
                 mapMessage.setObject("key", key);
             }

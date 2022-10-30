@@ -48,16 +48,23 @@ public class CacheMQTopicListener implements MessageListener {
             return;
         }
         MapMessage mm = (MapMessage) message;
-        Integer hashCode = this.get(() -> mm.getInt("hashCode"));
+        String uniqueId = this.get(() -> mm.getString("uniqueId"));
         Object key = this.get(() -> mm.getObject("key"));
         String md5 = this.get(() -> mm.getString("md5"));
-        if (hashCode == null || hashCode.intValue() == 0) {
+        if (StringUtils.isBlank(uniqueId)) {
             return;
         }
         for (AbstractLocalCache cache : caches) {
-            int currHashCode = cache.getClass().hashCode();
-            //这里判断是否是当前服务的本地缓存，如果是，则不需要重复清除
-            if (currHashCode == hashCode.intValue()) {
+            String currUniqueId = cache.getUniqueId();
+            /*
+                服务启动后AbstractLocalCache中会生成一个唯一标识，其子类实例共用这个唯一标识
+                通过这个唯一标识可判断cache跟发消息的缓存是否处于同一个服务进程
+                如果是同一个服务，则不需要往下执行
+
+                老版本中这里是通过class的hashcode来判断的，但是考虑到hashcode可能会出现重复的情况
+                因此改为唯一标识来判断
+             */
+            if (StringUtils.equals(currUniqueId, uniqueId)) {
                 continue;
             }
             if (key == null) {
