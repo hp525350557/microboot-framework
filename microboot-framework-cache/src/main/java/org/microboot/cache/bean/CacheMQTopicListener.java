@@ -54,8 +54,18 @@ public class CacheMQTopicListener implements MessageListener {
         if (StringUtils.isBlank(uniqueId)) {
             return;
         }
+        /*
+            之所以将变量放在循环外面，是为了提高性能
+            · 很多习惯写法是将变量直接放在循环内，那么每次循环都会产生一个新的引用指向一个新的对象
+              循环不结束，那么GC不能回收之前的对象
+            · 将变量写在循环外面，那么每次循环，引用指向一个新的对象，之前的对象就没有变量指向它了，GC时，即使循环不结束也能回收掉
+         */
+        String currMd5;
+        String currUniqueId;
+        Object value;
+        Cache.ValueWrapper valueWrapper;
         for (AbstractLocalCache cache : caches) {
-            String currUniqueId = cache.getUniqueId();
+            currUniqueId = cache.getUniqueId();
             /*
                 服务启动后AbstractLocalCache中会生成一个唯一标识，其子类实例共用这个唯一标识
                 通过这个唯一标识可判断cache跟发消息的缓存是否处于同一个服务进程
@@ -83,15 +93,15 @@ public class CacheMQTopicListener implements MessageListener {
                     因此在调用setValue方法时需要通过缓存数据的字节数组来判断数据是否真正变化
                     只有数据真的发生变化了的服务，才需要清除
                  */
-                Cache.ValueWrapper valueWrapper = cache.get(key);
+                valueWrapper = cache.get(key);
                 if (valueWrapper == null) {
                     continue;
                 }
-                Object value = cache.get(key).get();
+                value = valueWrapper.get();
                 if (value == null) {
                     continue;
                 }
-                String currMd5 = CryptoUtils.md5Hex(ConvertUtils.object2Bytes(value));
+                currMd5 = CryptoUtils.md5Hex(ConvertUtils.object2Bytes(value));
                 if (StringUtils.equals(md5, currMd5)) {
                     continue;
                 }

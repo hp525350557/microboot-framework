@@ -40,22 +40,35 @@ public class TemplateResolver {
             return;
         }
         TemplateLoader[] templateLoaderArray = new TemplateLoader[resources.length];
+        /*
+            之所以将变量放在循环外面，是为了提高性能
+            · 很多习惯写法是将变量直接放在循环内，那么每次循环都会产生一个新的引用指向一个新的对象
+              循环不结束，那么GC不能回收之前的对象
+            · 将变量写在循环外面，那么每次循环，引用指向一个新的对象，之前的对象就没有变量指向它了，GC时，即使循环不结束也能回收掉
+         */
+        Resource resource;
+        InputStream in;
+        StringWriter writer;
+        String templateName;
+        String templateKey;
+        String templateContent;
+        StringTemplateLoader templateLoader;
         for (int i = 0; i < resources.length; i++) {
-            Resource resource = resources[i];
-            String templateName = resource.getFilename();
+            resource = resources[i];
+            templateName = resource.getFilename();
             if (!StringUtils.endsWith(templateName, ".sql")) {
                 continue;
             }
-            InputStream in = resource.getInputStream();
-            StringWriter writer = new StringWriter();
+            in = resource.getInputStream();
+            writer = new StringWriter();
             IOUtils.copy(in, writer, StandardCharsets.UTF_8.name());
-            String templateKey = StringUtils.replace(templateName, ".sql", "");
-            String templateContent = writer.toString();
+            templateKey = StringUtils.replace(templateName, ".sql", "");
+            templateContent = writer.toString();
             in.close();
             writer.close();
-            StringTemplateLoader stringTemplateLoader = new StringTemplateLoader();
-            stringTemplateLoader.putTemplate(templateKey, templateContent);
-            templateLoaderArray[i] = stringTemplateLoader;
+            templateLoader = new StringTemplateLoader();
+            templateLoader.putTemplate(templateKey, templateContent);
+            templateLoaderArray[i] = templateLoader;
         }
         MultiTemplateLoader multiTemplateLoader = new MultiTemplateLoader(templateLoaderArray);
         this.configuration.setTemplateLoader(multiTemplateLoader);
