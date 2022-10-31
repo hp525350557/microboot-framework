@@ -181,13 +181,13 @@ public class DefaultSyncFuncHolder implements SyncFunc {
         /*
             如果newLock为null或者newLock != oldLock
             则表示有其他线程将lockMap中的锁删除或者替换了
-            假设现在有三个线程：t1，t2，t3，如果没有 do...while (newLock == null || newLock != oldLock) 判断
+            假设现在有三个线程：t1，t2，t3，如果没有 if (newLock == null || newLock != oldLock) 判断
                 1、t1 执行到 if (oldLock.getQueueLength() == 0)
                 2、t2 获取oldLock（与t1相同），暂未执行oldLock.lock()
                 3、t1 执行lockMap.remove(newKey, oldLock)
                 4、t3 执行oldLock = lockMap.computeIfAbsent(newKey, k -> new ReentrantLock())，此时得到新的锁
                 5、t2与t3将并发执行
-            因此需要判断oldLock 与 newKey是否一致，只有一致才往下执行，否则重新获取锁
+            因此需要判断oldLock 与 newKey是否一致，只有一致才往下执行，否则放弃本次执行
          */
         ReentrantLock newLock = lockMap.get(lockKey);
 

@@ -61,7 +61,7 @@ public class FileTransferUtils {
         file.createNewFile();
         try (
                 InputStream in = multipartFile.getInputStream();
-                FileOutputStream out = new FileOutputStream(file);
+                FileOutputStream out = new FileOutputStream(file)
         ) {
             IOUtils.copy(in, out);
         } catch (Throwable e) {
@@ -80,7 +80,7 @@ public class FileTransferUtils {
         file.createNewFile();
         try (
                 InputStream in = multipartFile.getInputStream();
-                FileOutputStream out = new FileOutputStream(file);
+                FileOutputStream out = new FileOutputStream(file)
         ) {
             IOUtils.copy(in, out);
         } catch (Throwable e) {

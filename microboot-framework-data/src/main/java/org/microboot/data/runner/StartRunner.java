@@ -4,12 +4,13 @@ import com.alibaba.druid.pool.DruidDataSource;
 import com.alibaba.druid.pool.xa.DruidXADataSource;
 import com.alibaba.druid.util.JdbcUtils;
 import org.apache.commons.collections.MapUtils;
-import org.apache.commons.compress.utils.Lists;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.microboot.core.bean.ApplicationContextHolder;
+import org.microboot.core.bean.DefaultSyncFuncHolder;
 import org.microboot.core.constant.Constant;
+import org.microboot.core.func.SyncFunc;
 import org.microboot.core.utils.LoggerUtils;
 import org.microboot.data.container.DataContainer;
 import org.microboot.data.factory.DataSourceFactory;
@@ -23,6 +24,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Map;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -64,48 +66,66 @@ public class StartRunner implements ApplicationRunner {
             return;
         }
         DataContainer.initMap.putAll(DataContainer.slavesMap);
+        //自定义ForkJoinPool线程池
+        ForkJoinPool forkJoinPool = new ForkJoinPool();
+        //创建同步锁
+        SyncFunc syncFunc = new DefaultSyncFuncHolder();
         //启动定时器
         ScheduledThreadPoolExecutor service = new ScheduledThreadPoolExecutor(1);
+        //设置最大线程数
         service.setMaximumPoolSize(1);
+        //定期在连接池中测试连接，并将异常连接加入退避容器
         service.scheduleWithFixedDelay(() -> {
             try {
                 /*
-                    测试连接，并将异常连接加入退避容器
-                    这里将Map的keySet转换成了List后再做parallelStream()操作是因为经过实验发现：
-                        Set的parallelStream()并没有根据CPU核数来进行并发处理
-                    这里选用多线程并发（并发限制交给了JUC，与CPU核数有关）的方式测试退避，
-                        因为串行化会受到连接测试时的超时时间影响，
+                    老版本：
+                        由于串行化的方式校验连接会受到连接测试时的超时时间影响
                         导致排在后面的连接可能已经断开了，但却需要等到前面的连接都测试完才能被测试到
+                        因此使用parallelStream()来实现并发测试，parallelStream()默认使用ForkJoinPool.commonPool()作为线程池
+                        ForkJoinPool.commonPool()默认使用CPU核数作为线程池的并发数
+                        经过实验发现：
+                            Set的parallelStream()并没有根据CPU核数来进行并发处理（未跟踪源码）
+                            因此将Map的keySet转换成了List后再做parallelStream()操作
+                            【
+                                Lists.newArrayList(DataContainer.initMap.keySet().iterator())
+                            】
+                    新版本：
+                        由于Java集合的parallelStream默认使用的是ForkJoinPool.commonPool()，全局所有parallelStream操作都是共享该池
+                        当频繁的用于阻塞型任务（IO流：http请求等）时会导致整个项目卡顿
+                        因此自定义一个ForkJoinPool来实现并发校验连接的操作
                  */
-                Lists.newArrayList(DataContainer.initMap.keySet().iterator()).parallelStream().forEach(name -> {
-                    //从退避集合获取对应连接名的退避时间点
-                    //1、如果为0则表示name对应的连接未加入退避
-                    //2、如果非0则表示name对应的连接已加入退避
-                    long backoffTime = MapUtils.getLongValue(DataContainer.backoffTimeMap, name, 0L);
-                    //当前系统时间
-                    long currentTime = System.currentTimeMillis();
-                    //上次退避上限时间
-                    long oldBackoffTimeLimit = MapUtils.getLongValue(DataContainer.backoffTimeLimitMap, name, 0L);
-                    //本次退避上限时间
-                    long newBackoffTimeLimit = NumberUtils.min(backoffTimeLimitMax, NumberUtils.max(oldBackoffTimeLimit, backoffTimeLimit));
-                    //判断当前连接是否处于退避期间：
-                    //1、退避时间点非0
-                    //2、(退避时间点 + 退避上限时间)大于当前时间
-                    if (backoffTime != 0 && (backoffTime + newBackoffTimeLimit) > currentTime) {
-                        //尚未达到恢复期
-                        return;
-                    }
-                    NamedParameterJdbcTemplate namedParameterJdbcTemplate = DataContainer.initMap.get(name);
-                    try {
-                        this.validateConnection(namedParameterJdbcTemplate);
-                        //移除退避
-                        setBackoffTime(name, namedParameterJdbcTemplate, false, 0L);
-                    } catch (Exception e) {
-                        LoggerUtils.error(logger, e);
-                        //添加退避
-                        setBackoffTime(name, namedParameterJdbcTemplate, true, newBackoffTimeLimit * backoffTimeLimitStep);
-                    }
-                });
+                for (String name : DataContainer.initMap.keySet()) {
+                    //同一个数据源并发同步，不同数据源并发执行
+                    forkJoinPool.submit(() -> syncFunc.skipSync(name, () -> {
+                        //从退避集合获取对应连接名的退避时间点
+                        //1、如果为0则表示name对应的连接未加入退避
+                        //2、如果非0则表示name对应的连接已加入退避
+                        long backoffTime = MapUtils.getLongValue(DataContainer.backoffTimeMap, name, 0L);
+                        //当前系统时间
+                        long currentTime = System.currentTimeMillis();
+                        //上次退避上限时间
+                        long oldBackoffTimeLimit = MapUtils.getLongValue(DataContainer.backoffTimeLimitMap, name, 0L);
+                        //本次退避上限时间
+                        long newBackoffTimeLimit = NumberUtils.min(backoffTimeLimitMax, NumberUtils.max(oldBackoffTimeLimit, backoffTimeLimit));
+                        //判断当前连接是否处于退避期间：
+                        //1、退避时间点非0
+                        //2、(退避时间点 + 退避上限时间)大于当前时间
+                        if (backoffTime != 0 && (backoffTime + newBackoffTimeLimit) > currentTime) {
+                            //尚未达到恢复期
+                            return;
+                        }
+                        NamedParameterJdbcTemplate namedParameterJdbcTemplate = DataContainer.initMap.get(name);
+                        try {
+                            this.validateConnection(namedParameterJdbcTemplate);
+                            //移除退避
+                            setBackoffTime(name, namedParameterJdbcTemplate, false, 0L);
+                        } catch (Exception e) {
+                            LoggerUtils.error(logger, e);
+                            //添加退避
+                            setBackoffTime(name, namedParameterJdbcTemplate, true, newBackoffTimeLimit * backoffTimeLimitStep);
+                        }
+                    }));
+                }
             } catch (Exception e) {
                 LoggerUtils.error(logger, e);
             }
