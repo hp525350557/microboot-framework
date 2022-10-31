@@ -1,6 +1,7 @@
 package org.microboot.data.runner;
 
 import com.alibaba.druid.pool.DruidDataSource;
+import com.alibaba.druid.pool.xa.DruidXADataSource;
 import com.alibaba.druid.util.JdbcUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.compress.utils.Lists;
@@ -57,12 +58,8 @@ public class StartRunner implements ApplicationRunner {
         }
         //如果主从连接同一个库，则不需要开启退避
         DataSource dataSource = ApplicationContextHolder.getBean(Constant.MASTER_DATA_SOURCE, DataSource.class);
-        String dataSourceName;
-        if (dataSource instanceof DruidDataSource) {
-            dataSourceName = ((DruidDataSource) dataSource).getName();
-        } else {
-            dataSourceName = ((AtomikosDataSourceBean) dataSource).getUniqueResourceName();
-        }
+        DruidDataSource druidDataSource = this.getDruidDataSource(dataSource);
+        String dataSourceName = druidDataSource.getName();
         if (slavesDataSourceMap.size() == 1 && slavesDataSourceMap.containsKey(dataSourceName)) {
             return;
         }
@@ -143,7 +140,8 @@ public class StartRunner implements ApplicationRunner {
      * @throws Exception
      */
     private void validateConnection(NamedParameterJdbcTemplate namedParameterJdbcTemplate) throws Exception {
-        DruidDataSource druidDataSource = (DruidDataSource) namedParameterJdbcTemplate.getJdbcTemplate().getDataSource();
+        DataSource dataSource = namedParameterJdbcTemplate.getJdbcTemplate().getDataSource();
+        DruidDataSource druidDataSource = this.getDruidDataSource(dataSource);
         String url = druidDataSource.getUrl();
         String username = druidDataSource.getUsername();
         String password = druidDataSource.getPassword();
@@ -155,5 +153,27 @@ public class StartRunner implements ApplicationRunner {
         } finally {
             JdbcUtils.close(connection);
         }
+    }
+
+    /**
+     * 获取DruidDataSource
+     *
+     * 老版本中，可以强转成DruidDataSource
+     * 但新版中加入了分布式事务数据源AtomikosDataSourceBean
+     * AtomikosDataSourceBean不是DruidDataSource的子类
+     * 因此不能直接强转，需要判断后进行转换
+     *
+     * @param dataSource
+     * @return
+     */
+    private DruidDataSource getDruidDataSource(DataSource dataSource) {
+        DruidDataSource druidDataSource;
+        if (dataSource instanceof DruidDataSource) {
+            druidDataSource = (DruidDataSource) dataSource;
+        } else {
+            AtomikosDataSourceBean atomikosDataSourceBean = (AtomikosDataSourceBean) dataSource;
+            druidDataSource = (DruidXADataSource) atomikosDataSourceBean.getXaDataSource();
+        }
+        return druidDataSource;
     }
 }
