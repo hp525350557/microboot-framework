@@ -14,11 +14,13 @@ public class CacheConstant {
     public static final String DEFAULT_CACHE_NAME = Constant.CACHE_NAME;
     public static final String DEFAULT_CACHE_LOCAL_NAME = Constant.CACHE_LOCAL_NAME;
     public static final String DEFAULT_CACHE_CENTRAL_NAME = Constant.CACHE_CENTRAL_NAME;
+    public static final boolean DEFAULT_CACHE_ALLOW_NULL_VALUES = false;
     //ehcache
     public static final String DEFAULT_EHCACHE_NAME = "microboot-ehcache";
     public static final String DEFAULT_EHCACHE_XML = "ehcache/ehcache.xml";
     //caffeine
     public static final String DEFAULT_CAFFEINE_NAME = "microboot-caffeine";
+    public static final boolean DEFAULT_CAFFEINE_ALLOW_NULL_VALUES = false;
     //memcached
     public static final String DEFAULT_MEMCACHED_NAME = "microboot-memcached";
     //redis

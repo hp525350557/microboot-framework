@@ -8,9 +8,9 @@ import net.spy.memcached.spring.MemcachedClientFactoryBean;
 import org.apache.activemq.command.ActiveMQTopic;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.microboot.cache.bean.CacheMQTopicListener;
 import org.microboot.cache.bean.CacheMQTopicProvider;
 import org.microboot.cache.constant.CacheConstant;
-import org.microboot.cache.bean.CacheMQTopicListener;
 import org.microboot.cache.impl.AbstractLocalCache;
 import org.microboot.cache.impl.CacheImpl;
 import org.microboot.cache.impl.CacheManagerImpl;
@@ -121,9 +121,11 @@ public class CacheConfig {
     public CacheImpl initCacheImpl(Environment environment) throws ClassNotFoundException {
         String classNames = environment.getProperty("cache.class");
         List<Cache> cacheList = getCacheList(classNames);
+        boolean allowNullValues = StringUtils.isBlank(environment.getProperty("cache.allow-null-values"))
+                ? CacheConstant.DEFAULT_CACHE_ALLOW_NULL_VALUES : Boolean.parseBoolean(environment.getProperty("cache.allow-null-values"));
         String cacheName = StringUtils.isBlank(environment.getProperty("cache.name"))
                 ? CacheConstant.DEFAULT_CACHE_NAME : environment.getProperty("cache.name");
-        return getCache(cacheName, cacheList);
+        return getCache(allowNullValues, cacheName, cacheList);
     }
 
     /**
@@ -138,9 +140,11 @@ public class CacheConfig {
     public CacheImpl initLocalCacheImpl(Environment environment) throws ClassNotFoundException {
         String classNames = environment.getProperty("cache.local.class");
         List<Cache> cacheList = getCacheList(classNames, true);
+        boolean allowNullValues = StringUtils.isBlank(environment.getProperty("cache.allow-null-values"))
+                ? CacheConstant.DEFAULT_CACHE_ALLOW_NULL_VALUES : Boolean.parseBoolean(environment.getProperty("cache.allow-null-values"));
         String cacheName = StringUtils.isBlank(environment.getProperty("cache.local.name"))
                 ? CacheConstant.DEFAULT_CACHE_LOCAL_NAME : environment.getProperty("cache.local.name");
-        return getCache(cacheName, cacheList);
+        return getCache(allowNullValues, cacheName, cacheList);
     }
 
     /**
@@ -155,9 +159,11 @@ public class CacheConfig {
     public CacheImpl initCentralCacheImpl(Environment environment) throws ClassNotFoundException {
         String classNames = environment.getProperty("cache.central.class");
         List<Cache> cacheList = getCacheList(classNames, false);
+        boolean allowNullValues = StringUtils.isBlank(environment.getProperty("cache.allow-null-values"))
+                ? CacheConstant.DEFAULT_CACHE_ALLOW_NULL_VALUES : Boolean.parseBoolean(environment.getProperty("cache.allow-null-values"));
         String cacheName = StringUtils.isBlank(environment.getProperty("cache.central.name"))
                 ? CacheConstant.DEFAULT_CACHE_CENTRAL_NAME : environment.getProperty("cache.central.name");
-        return getCache(cacheName, cacheList);
+        return getCache(allowNullValues, cacheName, cacheList);
     }
 
     /**
@@ -254,9 +260,12 @@ public class CacheConfig {
     @ConditionalOnProperty(name = "cache.caffeine.using", havingValue = "true")
     @Bean(name = "org.springframework.cache.caffeine.CaffeineCache")
     public CaffeineCache initCaffeineCache(Caffeine caffeine, Environment environment) {
+        boolean caffeineAllowNullValues = StringUtils.isBlank(environment.getProperty("cache.caffeine.allow-null-values"))
+                ? CacheConstant.DEFAULT_CAFFEINE_ALLOW_NULL_VALUES : Boolean.parseBoolean(environment.getProperty("cache.caffeine.allow-null-values"));
         String caffeineName = StringUtils.isBlank(environment.getProperty("cache.caffeine.name"))
                 ? CacheConstant.DEFAULT_CAFFEINE_NAME : environment.getProperty("cache.caffeine.name");
-        return new CaffeineCache(caffeineName, caffeine.build());
+        //这里构建CaffeineCache对象，默认让其不能缓存null值，交由CacheImpl统一管理。不然会造成CacheImpl里面缓存null值的判断失效
+        return new CaffeineCache(caffeineName, caffeine.build(), caffeineAllowNullValues);
     }
 
     /**
@@ -427,8 +436,8 @@ public class CacheConfig {
         return cacheList;
     }
 
-    private CacheImpl getCache(String cacheName, List<Cache> cacheList) {
-        CacheImpl cacheImpl = new CacheImpl();
+    private CacheImpl getCache(boolean allowNullValues, String cacheName, List<Cache> cacheList) {
+        CacheImpl cacheImpl = new CacheImpl(allowNullValues);
         cacheImpl.setName(cacheName);
         cacheImpl.getCaches().addAll(cacheList);
         return cacheImpl;
