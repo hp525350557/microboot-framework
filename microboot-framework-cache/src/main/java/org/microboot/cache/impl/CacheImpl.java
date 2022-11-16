@@ -139,6 +139,11 @@ public class CacheImpl extends AbstractValueAdaptingCache {
     /**
      * 可配置开启缓存null值【默认关闭】
      *
+     * lookup的返回值有三种可能，分别是：
+     * 1、null：在get方法中会返回null
+     * 2、NullValue.INSTANCE：在get方法中会被封装成SimpleValueWrapper(null)，这个值只会在开启缓存null的情况下出现，
+     * 3、业务数据：在get方法中会被封装成SimpleValueWrapper(Object)
+     *
      * @param key
      * @return
      */
@@ -187,43 +192,31 @@ public class CacheImpl extends AbstractValueAdaptingCache {
             if (key == null) {
                 return null;
             }
-            Object cacheValue;
-            ValueWrapper valueWrapper;
-            //记录空值Cache，并在返回数据之前，填充所有空值Cache
-            List<Cache> nullValueCaches = Lists.newArrayList();
-            for (Cache cache : this.caches) {
-                valueWrapper = cache.get(key);
-                if (valueWrapper == null) {
-                    nullValueCaches.add(cache);
-                    continue;
-                }
-                cacheValue = valueWrapper.get();
-                //1、cacheValue == NullValue.INSTANCE：说明开启缓存null值，由于返回值类型是T，因此返回null【防止缓存穿透】
-                if (cacheValue == NullValue.INSTANCE) {
-                    this.nullValueCachesPut(nullValueCaches, key, cacheValue);
-                    return null;
-                }
-                //2、cacheValue != null：说明缓存中有数据，那么直接强转返回
-                if (cacheValue != null) {
-                    this.nullValueCachesPut(nullValueCaches, key, cacheValue);
-                    return (T) cacheValue;
-                }
+            /*
+                valueWrapper有三种可能：
+                    1、null：多级缓存中没有业务数据，执行业务方法
+                    2、SimpleValueWrapper(null)：多级缓存中缓存了NullValue.INSTANCE，返回null
+                    3、SimpleValueWrapper(Object)：多级缓存中缓存了业务数据，返回业务数据
+             */
+            ValueWrapper valueWrapper = this.get(key);
+            if (valueWrapper != null) {
+                return (T) valueWrapper.get();
             }
-            //3、cacheValue == null：说明缓存中没有数据，那么此时就需要执行业务方法拿到返回值
+            //执行业务方法
             T value = callable.call();
-            //4、value != null：则可以将数据缓存下来，并直接返回了
+            //value != null：则可以将数据缓存下来，并返回value
             if (value != null) {
-                this.nullValueCachesPut(nullValueCaches, key, value);
+                this.nullValueCachesPut(this.caches, key, value);
                 return value;
             }
-            //5、value == null：说明业务数据也是null，那么通过preProcessCacheValue方法处理一下
-            cacheValue = this.preProcessCacheValue(null);
+            //value == null：则通过preProcessCacheValue方法处理一下
+            Object cacheValue = this.preProcessCacheValue(null);
             /*
-                6、cacheValue != null：说明开启缓存null值，此时cacheValue一定等于NullValue.INSTANCE
-                7、cacheValue == null：说明未开启缓存null值
+                1、cacheValue != null：说明开启缓存null值，此时cacheValue等于NullValue.INSTANCE
+                2、cacheValue == null：说明未开启缓存null值
              */
             if (cacheValue != null) {
-                this.nullValueCachesPut(nullValueCaches, key, cacheValue);
+                this.nullValueCachesPut(this.caches, key, cacheValue);
             }
             return null;
         });
@@ -250,29 +243,22 @@ public class CacheImpl extends AbstractValueAdaptingCache {
             if (key == null) {
                 return null;
             }
-            ValueWrapper valueWrapper;
-            //记录空值Cache，并在返回数据之前，填充所有空值Cache
-            List<Cache> nullValueCaches = Lists.newArrayList();
             /*
                 putIfAbsent方法的语义：
-                    当缓存中有对应数据，则直接返回，不做插入操作
-                    当缓存中没有对应数据，则将key-value存入缓存，并返回null
-                下面是实现逻辑：
-                    当valueWrapper != null时：将valueWrapper的值填充所有空值Cache集合，并返回valueWrapper
-                    当valueWrapper == null时：将cacheValue填充所有空值Cache集合，并返回null，当前cache忽略
+                    当缓存中有数据，则忽略新值，返回老值
+                    当缓存中没有数据，则缓存新值，返回null
+                valueWrapper有三种可能：
+                    1、null：多级缓存中没有业务数据，缓存新值，返回null
+                    2、SimpleValueWrapper(null)：多级缓存中缓存了NullValue.INSTANCE，缓存新值，返回null
+                    3、SimpleValueWrapper(Object)：多级缓存中缓存了业务数据，忽略新值，返回老值
              */
-            for (Cache cache : this.caches) {
-                valueWrapper = cache.get(key);
-                if (valueWrapper == null) {
-                    nullValueCaches.add(cache);
-                    continue;
-                }
-                this.nullValueCachesPut(nullValueCaches, key, valueWrapper.get());
-                return valueWrapper;
+            ValueWrapper valueWrapper = this.get(key);
+            if (valueWrapper == null || valueWrapper.get() == null) {
+                Object cacheValue = this.preProcessCacheValue(value);
+                this.nullValueCachesPut(this.caches, key, cacheValue);
+                return null;
             }
-            Object cacheValue = this.preProcessCacheValue(value);
-            this.nullValueCachesPut(nullValueCaches, key, cacheValue);
-            return null;
+            return valueWrapper;
         });
     }
 
