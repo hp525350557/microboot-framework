@@ -5,6 +5,7 @@ import com.google.common.collect.Maps;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -15,6 +16,7 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.microboot.core.func.Func1;
 
 import java.io.*;
 import java.util.List;
@@ -137,6 +139,16 @@ public class PoiUtils {
      * 读excel（标准行列个格式）
      *
      * @param filePath
+     * @return
+     */
+    public static Map<String, List<Map<String, Object>>> readSimpleExcel(String filePath) {
+        return readSimpleExcel(filePath, true);
+    }
+
+    /**
+     * 读excel（标准行列个格式）
+     *
+     * @param filePath
      * @param isKeepNull
      * @return
      */
@@ -173,13 +185,78 @@ public class PoiUtils {
      * 读excel（标准行列个格式）
      *
      * @param filePath
+     * @param sheetNames
+     * @return
+     */
+    public static Map<String, List<Map<String, Object>>> readSimpleExcel(String filePath, String... sheetNames) {
+        return readSimpleExcel(filePath, true, sheetNames);
+    }
+
+    /**
+     * 读excel（标准行列个格式）
+     *
+     * @param filePath
+     * @param isKeepNull
+     * @param sheetNames
+     * @return
+     */
+    public static Map<String, List<Map<String, Object>>> readSimpleExcel(String filePath, boolean isKeepNull, String... sheetNames) {
+        return readSimpleExcel(filePath, isKeepNull, 0, 0, sheetNames);
+    }
+
+    /**
+     * 读excel（标准行列个格式）
+     *
+     * @param filePath
      * @param isKeepNull
      * @param ignoreBefore
      * @param ignoreAfter
      * @param sheetNum
      * @return
      */
-    public static Map<String, List<Map<String, Object>>> readSimpleExcel(String filePath, boolean isKeepNull, int ignoreBefore, int ignoreAfter, int sheetNum) {
+    public static Map<String, List<Map<String, Object>>> readSimpleExcel(String filePath,
+                                                                         boolean isKeepNull,
+                                                                         int ignoreBefore,
+                                                                         int ignoreAfter,
+                                                                         int sheetNum) {
+        return readSimpleExcel(filePath, workbook -> {
+            Map<String, List<Map<String, Object>>> resultMap = Maps.newHashMap();
+            for (int i = 0; i < sheetNum; i++) {
+                List<Map<String, Object>> rowList = analysisByIndex(workbook, isKeepNull, i, ignoreBefore, ignoreAfter);
+                resultMap.put("sheet" + i, rowList);
+            }
+            return resultMap;
+        });
+    }
+
+    /**
+     * 读excel（标准行列个格式）
+     *
+     * @param filePath
+     * @param isKeepNull
+     * @param ignoreBefore
+     * @param ignoreAfter
+     * @param sheetNames
+     * @return
+     */
+    public static Map<String, List<Map<String, Object>>> readSimpleExcel(String filePath,
+                                                                         boolean isKeepNull,
+                                                                         int ignoreBefore,
+                                                                         int ignoreAfter,
+                                                                         String... sheetNames) {
+        return readSimpleExcel(filePath, workbook -> {
+            Map<String, List<Map<String, Object>>> resultMap = Maps.newHashMap();
+            if (ArrayUtils.isNotEmpty(sheetNames)) {
+                for (String sheetName : sheetNames) {
+                    List<Map<String, Object>> rowList = analysisByName(workbook, isKeepNull, sheetName, ignoreBefore, ignoreAfter);
+                    resultMap.put(sheetName, rowList);
+                }
+            }
+            return resultMap;
+        });
+    }
+
+    public static Map<String, List<Map<String, Object>>> readSimpleExcel(String filePath, Func1<Map<String, List<Map<String, Object>>>, Workbook> func) {
         if (StringUtils.isBlank(filePath)) {
             return null;
         }
@@ -194,12 +271,7 @@ public class PoiUtils {
             if (workbook == null) {
                 return null;
             }
-            Map<String, List<Map<String, Object>>> resultMap = Maps.newHashMap();
-            for (int i = 0; i < sheetNum; i++) {
-                List<Map<String, Object>> rowList = analysis(workbook, isKeepNull, i, ignoreBefore, ignoreAfter);
-                resultMap.put("sheet" + i, rowList);
-            }
-            return resultMap;
+            return func.func(workbook);
         } catch (Exception e) {
             LoggerUtils.error(logger, e);
         }
@@ -269,9 +341,21 @@ public class PoiUtils {
         return false;
     }
 
-    private static List<Map<String, Object>> analysis(Workbook workbook, boolean isKeepNull, int index, int ignoreBefore, int ignoreAfter) {
+    private static List<Map<String, Object>> analysisByIndex(Workbook workbook, boolean isKeepNull, int index, int ignoreBefore, int ignoreAfter) {
         //读取指定下标的sheet页
         Sheet sheet = workbook.getSheetAt(index);
+        //解析
+        return analysis(workbook, isKeepNull, sheet, ignoreBefore, ignoreAfter);
+    }
+
+    private static List<Map<String, Object>> analysisByName(Workbook workbook, boolean isKeepNull, String name, int ignoreBefore, int ignoreAfter) {
+        //读取指定名称的sheet页
+        Sheet sheet = workbook.getSheet(name);
+        //解析
+        return analysis(workbook, isKeepNull, sheet, ignoreBefore, ignoreAfter);
+    }
+
+    private static List<Map<String, Object>> analysis(Workbook workbook, boolean isKeepNull, Sheet sheet, int ignoreBefore, int ignoreAfter) {
         //默认第一行是字段名
         Row firstRow = sheet.getRow(sheet.getFirstRowNum() + ignoreBefore);
         //获取sheet页有多少行
