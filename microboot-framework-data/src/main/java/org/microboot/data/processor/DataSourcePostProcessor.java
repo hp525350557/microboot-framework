@@ -17,13 +17,14 @@ import java.util.Set;
 /**
  * @author 胡鹏
  *
- * other库用@Bean的方式构建可以实现XA分布式事务，用DefaultListableBeanFactory手动注入方式不行的原因：
+ * 问：为什么用@Bean方式手动构建固定的数据源时可以实现XA分布式事务，但用DefaultListableBeanFactory根据配置文件动态构建的方式不行？
+ * 答：其实与是不是@Bean创建数据源没有关系，只是一开始用DefaultListableBeanFactory动态构建时没有注意到一个细节
  * NamedParameterJdbcTemplate在创建的时候传入的是DruidXADataSource对象，而不是AtomikosDataSourceBean
- * NamedParameterJdbcTemplate在执行sql时，底层要获取分布式事务的连接池
- * XA必须用AtomikosDataSourceBean才可以
- * 主库之所有可以成功，并不是因为@Bean，而是因为在返回DataSource对象时就已经封装成AtomikosDataSourceBean了
- * 所以构建主库的NamedParameterJdbcTemplate时，用的就是AtomikosDataSourceBean对象
- * 从库之所以不能成功，是因为返回的Map中装的还是DruidXADataSource
+ * NamedParameterJdbcTemplate在执行sql时，底层要获取分布式事务的连接池，XA必须用AtomikosDataSourceBean才可以
+ * master库之所以成功，是因为返回DataSource对象时就已经封装成AtomikosDataSourceBean了
+ * 所以构建master库的NamedParameterJdbcTemplate时，用的是AtomikosDataSourceBean对象
+ * others库之所以失败，是因为返回Map<String, DataSource>中封装的还是DruidXADataSource
+ * 所以构建others库的NamedParameterJdbcTemplate时，用的是DruidXADataSource对象
  *
  * 下面是这次为了解决这个bug时学习到的一些知识：
  * 1、SpringBoot启动后，会先将所有注入的Bean的名称存到一个集合中，然后再轮询去构建bean实例

@@ -62,7 +62,7 @@ public class StartRunner implements ApplicationRunner {
         DataSource dataSource = ApplicationContextHolder.getBean(Constant.MASTER_DATA_SOURCE, DataSource.class);
         DruidDataSource druidDataSource = this.getDruidDataSource(dataSource);
         String dataSourceName = druidDataSource.getName();
-        if (slavesDataSourceMap.size() == 1 && slavesDataSourceMap.containsKey(dataSourceName)) {
+        if (slavesDataSourceMap.size() == 1 && slavesDataSourceMap.containsKey(dataSourceName) && slavesDataSourceMap.get(dataSourceName) == dataSource) {
             return;
         }
         DataContainer.initMap.putAll(DataContainer.slavesMap);
