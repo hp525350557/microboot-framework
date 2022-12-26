@@ -26,6 +26,10 @@ import java.util.Set;
  * others库之所以失败，是因为返回Map<String, DataSource>中封装的还是DruidXADataSource
  * 所以构建others库的NamedParameterJdbcTemplate时，用的是DruidXADataSource对象
  *
+ * 踩坑：https://www.cnblogs.com/lm970585581/p/14708807.html
+ * 多数据源提交可能需要在数据库层面设置一些参数，比如：PGSQL需要在postgresql.conf中将max_prepared_transactions设置成非0
+ * 一般设置成和max_connections一样大（100）就行
+ *
  * 下面是这次为了解决这个bug时学习到的一些知识：
  * 1、SpringBoot启动后，会先将所有注入的Bean的名称存到一个集合中，然后再轮询去构建bean实例
  * refreshContext -> refresh ... -> finishBeanFactoryInitialization(beanFactory)
