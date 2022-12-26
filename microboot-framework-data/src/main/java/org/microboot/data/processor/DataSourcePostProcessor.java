@@ -59,6 +59,10 @@ public class DataSourcePostProcessor implements InitializingBean {
         //默认事务管理器
         defaultTransactionManager(dataSource);
 
+        Map<String, DataSource> slavesDataSourceMap = (Map<String, DataSource>) ApplicationContextHolder.getBean(Constant.SLAVES_DATA_SOURCE);
+        //动态事务管理器
+        this.dynamicTransactionManager(slavesDataSourceMap);
+
         Map<String, DataSource> othersDataSourceMap = (Map<String, DataSource>) ApplicationContextHolder.getBean(Constant.OTHERS_DATA_SOURCE);
         //动态事务管理器
         this.dynamicTransactionManager(othersDataSourceMap);
