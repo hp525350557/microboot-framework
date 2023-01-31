@@ -38,6 +38,15 @@ import java.util.concurrent.Callable;
  * 比如：
  * 多个线程同时更新并缓存同一个key的值，由于线程间执行速度不一致，可能某个业务方法先提交数据库，但是后更新缓存
  * 这可能就会存在线程安全性问题，这不是在缓存里加锁能解决的，只能交给业务端去处理
+ * 注意：
+ * 由于Spring的Cache接口中，定义了get(Object key, Callable<T> valueLoader)这样的方法
+ * 所以get方法可以把缓存和业务方法放在同步锁范围内，当然在consumer和producer这种体系中可能也会因为远程调用而失效
+ * 但是pring的Cache接口中，没有一个put方法是带了Callable<T> valueLoader这样的参数的
+ * 所以put方法中对缓存的操作和业务方法之间是分离的，缓存和业务方法天然就存在线程安全性问题
+ * 即：先提交数据库 -> 中间产生并发问题 -> 后更新缓存，最终的后果是导致缓存和数据库不一致
+ *
+ * 解决方案：
+ * 通过Spring容器获取CacheImpl的bean，然后手动更新缓存，将更新缓存的逻辑放到事务提交之前完成...
  *
  * 下面举个例子说明，为什么不直接用转换成字符串后的newKey作为synchronized的锁对象
  * public class Obj2StringTest {
