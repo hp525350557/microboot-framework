@@ -148,10 +148,6 @@
                 </exclusion>
             </exclusions>
         </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-        </dependency>
         <!--
             当前版本spring-boot-starter-log4j2在当前springboot版本有bug，客户要求升级log4j2
             那么就需要将SpringBoot（2.5.7版本），SpringCloud（2020.0.4版本）的版本都联动升级
