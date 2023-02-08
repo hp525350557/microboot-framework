@@ -1,16 +1,21 @@
 package org.microboot.data.basedao;
 
 import com.google.common.collect.Maps;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.microboot.core.bean.ApplicationContextHolder;
 import org.microboot.core.entity.Page;
 import org.microboot.core.utils.ConvertUtils;
 import org.microboot.data.container.DataContainer;
+import org.microboot.data.resolver.TemplateResolver;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.SqlParameterSourceUtils;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
+import org.springframework.util.Assert;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -653,8 +658,13 @@ public abstract class AbstractBaseDaoWithOthers extends AbstractBaseDao {
      * @throws Exception
      */
     public int executeWithOthers(String templateName, Map<String, ?> parameters, String dataBaseName) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithOthers(dataBaseName);
-        return this.execute(templateName, parameters, namedParameterJdbcTemplate);
+        /*
+            不能复用execute*方法，因为getOrCreate方法会将当前namedParameterJdbcTemplate对象设置到ThreadLocal中
+            这会导致读取从库数据时使用的数据源混乱
+            ThreadLocal中只能保存主库的namedParameterJdbcTemplate对象
+         */
+        String sql = ApplicationContextHolder.getBean(TemplateResolver.class).processTemplate(templateName, parameters);
+        return this.executeBySqlWithOthers(sql, parameters, dataBaseName);
     }
 
     /**
@@ -697,8 +707,15 @@ public abstract class AbstractBaseDaoWithOthers extends AbstractBaseDao {
      * @throws Exception
      */
     public int executeWithOthers(String templateName, MapSqlParameterSource parameterSource, String dataBaseName) throws Exception {
+        /*
+            不能复用execute*方法，因为getOrCreate方法会将当前namedParameterJdbcTemplate对象设置到ThreadLocal中
+            这会导致读取从库数据时使用的数据源混乱
+            ThreadLocal中只能保存主库的namedParameterJdbcTemplate对象
+         */
+        Assert.notNull(parameterSource, "parameterSource must not be null");
+        String sql = ApplicationContextHolder.getBean(TemplateResolver.class).processTemplate(templateName, parameterSource.getValues());
         NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithOthers(dataBaseName);
-        return this.execute(templateName, parameterSource, namedParameterJdbcTemplate);
+        return namedParameterJdbcTemplate.update(sql, parameterSource);
     }
 
 
@@ -710,8 +727,19 @@ public abstract class AbstractBaseDaoWithOthers extends AbstractBaseDao {
      * @throws Exception
      */
     public int[] executeBatchWithOthers(String templateName, List<?> parametersList, String dataBaseName) throws Exception {
+        /*
+            不能复用execute*方法，因为getOrCreate方法会将当前namedParameterJdbcTemplate对象设置到ThreadLocal中
+            这会导致读取从库数据时使用的数据源混乱
+            ThreadLocal中只能保存主库的namedParameterJdbcTemplate对象
+         */
+        if (CollectionUtils.isEmpty(parametersList)) {
+            return new int[]{0};
+        }
+        //得到sql模板
+        String sql = ApplicationContextHolder.getBean(TemplateResolver.class).processTemplate(templateName, null);
+        logger.info(sql + " -> " + ConvertUtils.listMap2Json(parametersList));
         NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithOthers(dataBaseName);
-        return this.executeBatch(templateName, parametersList, namedParameterJdbcTemplate);
+        return namedParameterJdbcTemplate.batchUpdate(sql, SqlParameterSourceUtils.createBatch(parametersList));
     }
 
     /**
@@ -722,8 +750,14 @@ public abstract class AbstractBaseDaoWithOthers extends AbstractBaseDao {
      * @throws Exception
      */
     public int executeBySqlWithOthers(String sql, Map<String, ?> parameters, String dataBaseName) throws Exception {
+        /*
+            不能复用execute*方法，因为getOrCreate方法会将当前namedParameterJdbcTemplate对象设置到ThreadLocal中
+            这会导致读取从库数据时使用的数据源混乱
+            ThreadLocal中只能保存主库的namedParameterJdbcTemplate对象
+         */
+        logger.info(sql + " -> " + ConvertUtils.map2Json(parameters));
         NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithOthers(dataBaseName);
-        return this.executeBySql(sql, parameters, namedParameterJdbcTemplate);
+        return namedParameterJdbcTemplate.update(sql, parameters);
     }
 
     /**
@@ -766,8 +800,15 @@ public abstract class AbstractBaseDaoWithOthers extends AbstractBaseDao {
      * @throws Exception
      */
     public int executeBySqlWithOthers(String sql, MapSqlParameterSource parameterSource, String dataBaseName) throws Exception {
+        /*
+            不能复用execute*方法，因为getOrCreate方法会将当前namedParameterJdbcTemplate对象设置到ThreadLocal中
+            这会导致读取从库数据时使用的数据源混乱
+            ThreadLocal中只能保存主库的namedParameterJdbcTemplate对象
+         */
+        Assert.notNull(parameterSource, "parameterSource must not be null");
+        logger.info(sql + " -> " + ConvertUtils.object2Json(parameterSource));
         NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithOthers(dataBaseName);
-        return this.executeBySql(sql, parameterSource, namedParameterJdbcTemplate);
+        return namedParameterJdbcTemplate.update(sql, parameterSource);
     }
 
     /**
@@ -778,8 +819,14 @@ public abstract class AbstractBaseDaoWithOthers extends AbstractBaseDao {
      * @throws Exception
      */
     public int[] executeBatchBySqlWithOthers(String sql, List<?> parametersList, String dataBaseName) throws Exception {
+        /*
+            不能复用execute*方法，因为getOrCreate方法会将当前namedParameterJdbcTemplate对象设置到ThreadLocal中
+            这会导致读取从库数据时使用的数据源混乱
+            ThreadLocal中只能保存主库的namedParameterJdbcTemplate对象
+         */
+        logger.info(sql + " -> " + ConvertUtils.listMap2Json(parametersList));
         NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithOthers(dataBaseName);
-        return this.executeBatchBySql(sql, parametersList, namedParameterJdbcTemplate);
+        return namedParameterJdbcTemplate.batchUpdate(sql, SqlParameterSourceUtils.createBatch(parametersList));
     }
 
     /**
