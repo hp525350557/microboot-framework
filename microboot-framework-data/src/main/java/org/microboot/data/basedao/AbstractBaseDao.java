@@ -445,7 +445,7 @@ public abstract class AbstractBaseDao extends TransmittableThreadLocal<NamedPara
             while ((namedParameterJdbcTemplate = namedParameterJdbcTemplateMap.getOrDefault(name, null)) == null
                     && (modIndex = nextIndex % length) != index
                     && !namedParameterJdbcTemplateMap.isEmpty()) {
-                //通过nextIndex提取下一个name
+                //通过modIndex提取下一个name
                 name = names[modIndex];
                 //递增
                 nextIndex++;
