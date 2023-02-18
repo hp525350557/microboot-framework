@@ -10,3 +10,7 @@ microboot-framework是基于springboot的web开发框架
 6. microboot-framework-validator：验证模块
 7. microboot-framework-web：web模块
 8. microboot-framework-view：view模块
+
+### maven引入
+通过jitpack可以搜索com.gitee.hp525350557/microboot-framework
+依据jitpack的文档，在maven中导入框架
