@@ -437,14 +437,14 @@ public abstract class AbstractBaseDao extends TransmittableThreadLocal<NamedPara
                 即：从某个随机下标开始递增，通过递增数字与数组长度取模，获取数组的下标值，实现在数组上做"有向环形图"
                    直到轮询names数组一圈或拿到非null的namedParameterJdbcTemplate对象为止
                     1、通过name获取namedParameterJdbcTemplate对象，但是对应的连接有可能已经被退避了，因此可能会获取到null值
-                    2、通过取模运算获取nextIndex，当nextIndex大于等于index时，说明在names上轮询了一圈
+                    2、如果namedParameterJdbcTemplateMap为空，则没必要继续轮询了
+                    3、通过取模运算获取modIndex，当modIndex等于index时，说明在names上轮询了一周
                        如果此时namedParameterJdbcTemplate仍然是null
-                       说明这个瞬间的names中已经找不到可用连接了
-                    3、namedParameterJdbcTemplateMap如果已经是空了，则没必要继续轮询了
+                       说明这个瞬间已经找不到可用连接了
              */
             while ((namedParameterJdbcTemplate = namedParameterJdbcTemplateMap.getOrDefault(name, null)) == null
-                    && (modIndex = nextIndex % length) != index
-                    && !namedParameterJdbcTemplateMap.isEmpty()) {
+                    && !namedParameterJdbcTemplateMap.isEmpty()
+                    && (modIndex = nextIndex % length) != index) {
                 //通过modIndex提取下一个name
                 name = names[modIndex];
                 //递增
