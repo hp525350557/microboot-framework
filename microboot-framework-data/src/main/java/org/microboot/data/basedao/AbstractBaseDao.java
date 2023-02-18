@@ -401,24 +401,25 @@ public abstract class AbstractBaseDao extends TransmittableThreadLocal<NamedPara
      * @return
      */
     protected NamedParameterJdbcTemplate getNamedParameterJdbcTemplate(Map<String, NamedParameterJdbcTemplate> namedParameterJdbcTemplateMap) {
+        //定义namedParameterJdbcTemplate
         NamedParameterJdbcTemplate namedParameterJdbcTemplate;
-        //总连接数
+        //获取总连接数
         int size = namedParameterJdbcTemplateMap.size();
         //总连接数为0表示没有可用连接
         if (size == 0) {
             return null;
         }
         //随机下标
-        // ThreadLocalRandom比Random性能更高
-        // java7在所有情形下都更推荐使用ThreadLocalRandom，它向下兼容已有的代码且运营成本更低
+        //ThreadLocalRandom比Random性能更高
+        //java7在所有情形下都更推荐使用ThreadLocalRandom，它向下兼容已有的代码且运营成本更低
         int index = ThreadLocalRandom.current().nextInt(size);
         //所有连接名（new String[0]用来指定数组类型，toArray方法的参数是泛型）
         String[] names = namedParameterJdbcTemplateMap.keySet().toArray(new String[0]);
-        //获取names数组长度，此时names是拷贝的局部变量，因此不会随着namedParameterJdbcTemplateMap中元素变化而变化
-        int l = names.length;
-        //如果index >= names.length为true，说明在获取names的这一瞬间有被退避的连接重新加入到namedParameterJdbcTemplateMap中了
+        //获取names数组长度，此时names是局部变量，names中的值是copy进来的，因此不会随着namedParameterJdbcTemplateMap中元素变化而变化
+        int length = names.length;
+        //如果index >= names.length为true，说明在获取names的这一瞬间有连接被退避，从namedParameterJdbcTemplateMap中移除了
         //为了不引起下标溢出异常，因此递归重新计算
-        if (index >= l) {
+        if (index >= length) {
             /*
                 在主从读写分离模式下，如果从库连接异常发生退避，有可能出现index >= names.length造成names[index]下标溢出
                 因此递归重新获取namedParameterJdbcTemplate对象
@@ -427,30 +428,27 @@ public abstract class AbstractBaseDao extends TransmittableThreadLocal<NamedPara
         } else {
             //提取连接名
             String name = names[index];
-            //此处获取的连接名有可能已经被退避了，可能会获取到null值
-            namedParameterJdbcTemplate = namedParameterJdbcTemplateMap.getOrDefault(name, null);
+            //用于计算modIndex
+            int nextIndex = index + 1;
+            //定义modIndex
+            int modIndex;
             /*
                 下面是参考ForkJoinPool的scan方法
                 即：从某个随机下标开始递增，通过递增数字与数组长度取模，获取数组的下标值，实现在数组上做"有向环形图"
                    直到轮询names数组一圈或拿到非null的namedParameterJdbcTemplate对象为止
+                    1、通过name获取namedParameterJdbcTemplate对象，但是对应的连接有可能已经被退避了，因此可能会获取到null值
+                    2、通过取模运算获取nextIndex，当nextIndex大于等于index时，说明在names上轮询了一圈
+                       如果此时namedParameterJdbcTemplate仍然是null
+                       说明这个瞬间的names中已经找不到可用连接了
+                    3、namedParameterJdbcTemplateMap如果已经是空了，则没必要继续轮询了
              */
-            int i = index + 1;
-            //取模运算，获取下一个下标值
-            int nextIndex = i % l;
-            /*
-                当nextIndex等于index时，说明在names上轮询了一圈
-                如果此时namedParameterJdbcTemplate仍然是null
-                说明这个瞬间的names中已经找不到可用连接了
-             */
-            while (namedParameterJdbcTemplate == null && nextIndex != index) {
-                //提取连接名
-                name = names[nextIndex];
-                //此处获取的连接名有可能已经被退避了，可能会获取到null值
-                namedParameterJdbcTemplate = namedParameterJdbcTemplateMap.getOrDefault(name, null);
+            while ((namedParameterJdbcTemplate = namedParameterJdbcTemplateMap.getOrDefault(name, null)) == null
+                    && (modIndex = nextIndex % length) != index
+                    && !namedParameterJdbcTemplateMap.isEmpty()) {
+                //通过nextIndex提取下一个name
+                name = names[modIndex];
                 //递增
-                i++;
-                //取模运算，获取下一个下标值
-                nextIndex = i % l;
+                nextIndex++;
             }
         }
         return namedParameterJdbcTemplate;
