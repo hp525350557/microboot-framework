@@ -24,7 +24,6 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Map;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -66,37 +65,37 @@ public class StartRunner implements ApplicationRunner {
             return;
         }
         DataContainer.initMap.putAll(DataContainer.slavesMap);
-        //自定义ForkJoinPool线程池
-        ForkJoinPool forkJoinPool = new ForkJoinPool();
         //创建同步锁
         SyncFunc syncFunc = new DefaultSyncFuncHolder();
         //启动定时器
-        ScheduledThreadPoolExecutor service = new ScheduledThreadPoolExecutor(1);
+        ScheduledThreadPoolExecutor service = new ScheduledThreadPoolExecutor(DataContainer.initMap.size());
         //设置最大线程数
-        service.setMaximumPoolSize(1);
+        service.setMaximumPoolSize(DataContainer.initMap.size());
         //定期在连接池中测试连接，并将异常连接加入退避容器
-        service.scheduleWithFixedDelay(() -> {
-            try {
-                /*
-                    老版本：
-                        由于串行化的方式校验连接会受到连接测试时的超时时间影响
-                        导致排在后面的连接可能已经断开了，但却需要等到前面的连接都测试完才能被测试到
-                        因此使用parallelStream()来实现并发测试，parallelStream()默认使用ForkJoinPool.commonPool()作为线程池
-                        ForkJoinPool.commonPool()默认使用CPU核数作为线程池的并发数
-                        经过实验发现：
-                            Set的parallelStream()并没有根据CPU核数来进行并发处理（未跟踪源码）
-                            因此将Map的keySet转换成了List后再做parallelStream()操作
-                            【
-                                Lists.newArrayList(DataContainer.initMap.keySet().iterator())
-                            】
-                    新版本：
-                        由于Java集合的parallelStream默认使用的是ForkJoinPool.commonPool()，全局所有parallelStream操作都是共享该池
-                        当频繁的用于阻塞型任务（IO流：http请求等）时会导致整个项目卡顿
-                        因此自定义一个ForkJoinPool来实现并发校验连接的操作
-                 */
-                for (String name : DataContainer.initMap.keySet()) {
-                    //同一个数据源并发同步，不同数据源并发执行
-                    forkJoinPool.submit(() -> syncFunc.skipSync(name, () -> {
+        /*
+            版本一：
+                由于串行化的方式校验连接会受到连接测试时的超时时间影响
+                导致排在后面的连接可能已经断开了，但却需要等到前面的连接都测试完才能被测试到
+                因此使用parallelStream()来实现并发测试，parallelStream()默认使用ForkJoinPool.commonPool()作为线程池
+                ForkJoinPool.commonPool()默认使用CPU核数作为线程池的并发数
+                经过实验发现：
+                    Set的parallelStream()并没有根据CPU核数来进行并发处理（未跟踪源码）
+                    因此将Map的keySet转换成了List后再做parallelStream()操作
+                    【
+                        Lists.newArrayList(DataContainer.initMap.keySet().iterator())
+                    】
+            版本二：
+                由于Java集合的parallelStream默认使用的是ForkJoinPool.commonPool()，全局所有parallelStream操作都是共享该池
+                当频繁的用于阻塞型任务（IO流：http请求等）时会导致整个项目卡顿
+                因此自定义一个ForkJoinPool来实现并发校验连接的操作
+            现版本：
+                直接使用ScheduledThreadPoolExecutor执行定时多线程多任务，不再额外创建ForkJoinPool线程池
+         */
+        for (String name : DataContainer.initMap.keySet()) {
+            //同name数据源并发加锁，不同name数据源并发执行
+            service.scheduleWithFixedDelay(() -> {
+                try {
+                    syncFunc.skipSync(name, () -> {
                         //从退避集合获取对应连接名的退避时间点
                         //1、如果为0则表示name对应的连接未加入退避
                         //2、如果非0则表示name对应的连接已加入退避
@@ -124,12 +123,12 @@ public class StartRunner implements ApplicationRunner {
                             //添加退避
                             setBackoffTime(name, namedParameterJdbcTemplate, true, newBackoffTimeLimit * backoffTimeLimitStep);
                         }
-                    }));
+                    });
+                } catch (Exception e) {
+                    LoggerUtils.error(logger, e);
                 }
-            } catch (Exception e) {
-                LoggerUtils.error(logger, e);
-            }
-        }, backoffTimeDelay, backoffTimePeriod, TimeUnit.MILLISECONDS);
+            }, backoffTimeDelay, backoffTimePeriod, TimeUnit.MILLISECONDS);
+        }
     }
 
     /**
