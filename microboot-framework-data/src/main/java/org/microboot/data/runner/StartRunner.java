@@ -1,10 +1,10 @@
 package org.microboot.data.runner;
 
 import com.alibaba.druid.pool.DruidDataSource;
-import com.alibaba.druid.pool.xa.DruidXADataSource;
 import com.alibaba.druid.util.JdbcUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.math.NumberUtils;
+import org.apache.http.util.Asserts;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.microboot.core.bean.ApplicationContextHolder;
@@ -14,9 +14,9 @@ import org.microboot.core.func.SyncFunc;
 import org.microboot.core.utils.LoggerUtils;
 import org.microboot.data.container.DataContainer;
 import org.microboot.data.factory.DataSourceFactory;
+import org.microboot.data.func.XADataSourceFactoryFunc;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.boot.jta.atomikos.AtomikosDataSourceBean;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import javax.sql.DataSource;
@@ -178,9 +178,8 @@ public class StartRunner implements ApplicationRunner {
      * 获取DruidDataSource
      *
      * 老版本中，可以强转成DruidDataSource
-     * 但新版中加入了分布式事务数据源AtomikosDataSourceBean
-     * AtomikosDataSourceBean不是DruidDataSource的子类
-     * 因此不能直接强转，需要判断后进行转换
+     * 新版本中，加入了分布式事务数据源AtomikosDataSourceBean
+     * AtomikosDataSourceBean不是DruidDataSource的子类，因此不能直接强转
      *
      * @param dataSource
      * @return
@@ -190,8 +189,12 @@ public class StartRunner implements ApplicationRunner {
         if (dataSource instanceof DruidDataSource) {
             druidDataSource = (DruidDataSource) dataSource;
         } else {
-            AtomikosDataSourceBean atomikosDataSourceBean = (AtomikosDataSourceBean) dataSource;
-            druidDataSource = (DruidXADataSource) atomikosDataSourceBean.getXaDataSource();
+            Asserts.check(
+                    ApplicationContextHolder.getApplicationContext().containsLocalBean(XADataSourceFactoryFunc.class.getName()),
+                    XADataSourceFactoryFunc.class.getName().concat(" cannot find the implementation class")
+            );
+            druidDataSource = ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class).getDruidDataSource(dataSource);
+            Asserts.check(druidDataSource != null, "druidDataSource cannot be null");
         }
         return druidDataSource;
     }

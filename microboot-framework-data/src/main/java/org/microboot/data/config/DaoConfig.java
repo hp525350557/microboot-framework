@@ -6,15 +6,16 @@ import freemarker.cache.MruCacheStorage;
 import freemarker.ext.beans.BeansWrapperBuilder;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.util.Asserts;
 import org.microboot.core.bean.ApplicationContextHolder;
 import org.microboot.core.constant.Constant;
 import org.microboot.data.aspect.ClearThreadLocalAspect;
 import org.microboot.data.basedao.BaseDao;
 import org.microboot.data.factory.DataSourceFactory;
+import org.microboot.data.func.XADataSourceFactoryFunc;
 import org.microboot.data.processor.DataSourcePostProcessor;
 import org.microboot.data.resolver.TemplateResolver;
 import org.microboot.data.runner.StartRunner;
-import org.springframework.boot.jta.atomikos.AtomikosDataSourceBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
@@ -64,9 +65,15 @@ public class DaoConfig {
     @Bean(name = Constant.MASTER_DATA_SOURCE)
     public DataSource initMasterDataSource(DataSourceFactory dataSourceFactory) {
         Map<String, Object> master = dataSourceFactory.getMaster();
-        DruidDataSource dataSource = dataSourceFactory.createDataSource(master);
-        AtomikosDataSourceBean atomikosDataSource = dataSourceFactory.createAtomikosDataSourceBean(dataSource);
-        if (atomikosDataSource != null) return atomikosDataSource;
+        DataSource dataSource = dataSourceFactory.createDataSource(master);
+        if (dataSourceFactory.isEnableXA()) {
+            Asserts.check(
+                    ApplicationContextHolder.getApplicationContext().containsLocalBean(XADataSourceFactoryFunc.class.getName()),
+                    XADataSourceFactoryFunc.class.getName().concat(" cannot find the implementation class")
+            );
+            dataSource = ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class).rebuildDataSource(dataSource);
+            Asserts.check(dataSource != null, "dataSource cannot be null");
+        }
         return dataSource;
     }
 
@@ -98,11 +105,14 @@ public class DaoConfig {
         } else {
             //如果定义了从库，则主从分离，主数据库用来写，从数据库用来读
             for (Map<String, Object> slave : slaves) {
-                DruidDataSource dataSource = dataSourceFactory.createDataSource(slave);
-                AtomikosDataSourceBean atomikosDataSource = dataSourceFactory.createAtomikosDataSourceBean(dataSource);
-                if (atomikosDataSource != null) {
-                    putDataSourceMap(dataSourceMap, atomikosDataSource);
-                    continue;
+                DataSource dataSource = dataSourceFactory.createDataSource(slave);
+                if (dataSourceFactory.isEnableXA()) {
+                    Asserts.check(
+                            ApplicationContextHolder.getApplicationContext().containsLocalBean(XADataSourceFactoryFunc.class.getName()),
+                            XADataSourceFactoryFunc.class.getName().concat(" cannot find the implementation class")
+                    );
+                    dataSource = ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class).rebuildDataSource(dataSource);
+                    Asserts.check(dataSource != null, "dataSource cannot be null");
                 }
                 putDataSourceMap(dataSourceMap, dataSource);
             }
@@ -126,11 +136,14 @@ public class DaoConfig {
         } else {
             //如果定义了其他库，则构建其他库连接池
             for (Map<String, Object> other : others) {
-                DruidDataSource dataSource = dataSourceFactory.createDataSource(other);
-                AtomikosDataSourceBean atomikosDataSource = dataSourceFactory.createAtomikosDataSourceBean(dataSource);
-                if (atomikosDataSource != null) {
-                    putDataSourceMap(dataSourceMap, atomikosDataSource);
-                    continue;
+                DataSource dataSource = dataSourceFactory.createDataSource(other);
+                if (dataSourceFactory.isEnableXA()) {
+                    Asserts.check(
+                            ApplicationContextHolder.getApplicationContext().containsLocalBean(XADataSourceFactoryFunc.class.getName()),
+                            XADataSourceFactoryFunc.class.getName().concat(" cannot find the implementation class")
+                    );
+                    dataSource = ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class).rebuildDataSource(dataSource);
+                    Asserts.check(dataSource != null, "dataSource cannot be null");
                 }
                 putDataSourceMap(dataSourceMap, dataSource);
             }
@@ -240,14 +253,17 @@ public class DaoConfig {
      * @param dataSource
      */
     private void putDataSourceMap(Map<String, DataSource> dataSourceMap, DataSource dataSource) {
-        if (dataSource == null) {
+        if (dataSourceMap == null || dataSource == null) {
             return;
         }
         if (dataSource instanceof DruidDataSource) {
             dataSourceMap.put(((DruidDataSource) dataSource).getName(), dataSource);
-        }
-        if (dataSource instanceof AtomikosDataSourceBean) {
-            dataSourceMap.put(((AtomikosDataSourceBean) dataSource).getUniqueResourceName(), dataSource);
+        } else {
+            Asserts.check(
+                    ApplicationContextHolder.getApplicationContext().containsLocalBean(XADataSourceFactoryFunc.class.getName()),
+                    XADataSourceFactoryFunc.class.getName().concat(" cannot find the implementation class")
+            );
+            ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class).putDataSourceMap(dataSourceMap, dataSource);
         }
     }
 }

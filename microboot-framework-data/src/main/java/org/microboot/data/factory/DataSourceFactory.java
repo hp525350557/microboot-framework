@@ -8,7 +8,6 @@ import lombok.Setter;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.jta.atomikos.AtomikosDataSourceBean;
 
 import javax.sql.DataSource;
 import java.util.List;
@@ -62,7 +61,7 @@ public class DataSourceFactory {
      * @param parameters
      * @return
      */
-    public DruidDataSource createDataSource(Map<String, Object> parameters) {
+    public DataSource createDataSource(Map<String, Object> parameters) {
         //连接池配置
         Map<String, Object> dataSourceMap = Maps.newHashMap();
         //master是默认配置
@@ -92,21 +91,5 @@ public class DataSourceFactory {
         druidDataSource.configFromPropety(properties);
 
         return druidDataSource;
-    }
-
-    /**
-     * 创建AtomikosDataSourceBean
-     *
-     * @param dataSource
-     * @return
-     */
-    public AtomikosDataSourceBean createAtomikosDataSourceBean(DataSource dataSource) {
-        if (dataSource instanceof DruidXADataSource) {
-            AtomikosDataSourceBean atomikosDataSource = new AtomikosDataSourceBean();
-            atomikosDataSource.setUniqueResourceName(((DruidXADataSource) dataSource).getName());
-            atomikosDataSource.setXaDataSource((DruidXADataSource) dataSource);
-            return atomikosDataSource;
-        }
-        return null;
     }
 }

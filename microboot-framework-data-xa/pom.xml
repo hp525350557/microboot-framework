@@ -9,25 +9,18 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>microboot-framework-data</artifactId>
+    <artifactId>microboot-framework-data-xa</artifactId>
 
     <dependencies>
         <dependency>
             <groupId>org.microbootframework</groupId>
-            <artifactId>microboot-framework-core</artifactId>
+            <artifactId>microboot-framework-data</artifactId>
             <version>master-SNAPSHOT</version>
         </dependency>
+        <!--分布式事务-->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-jdbc</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-freemarker</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.alibaba</groupId>
-            <artifactId>druid</artifactId>
+            <artifactId>spring-boot-starter-jta-atomikos</artifactId>
         </dependency>
     </dependencies>
 

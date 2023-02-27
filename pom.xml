@@ -220,6 +220,7 @@
         <module>microboot-framework-cache</module>
         <module>microboot-framework-core</module>
         <module>microboot-framework-data</module>
+        <module>microboot-framework-data-xa</module>
         <module>microboot-framework-logging</module>
         <module>microboot-framework-security</module>
         <module>microboot-framework-validator</module>
