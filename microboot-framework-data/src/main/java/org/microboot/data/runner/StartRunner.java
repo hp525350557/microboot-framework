@@ -191,10 +191,10 @@ public class StartRunner implements ApplicationRunner {
         } else {
             Asserts.check(
                     ApplicationContextHolder.getApplicationContext().containsLocalBean(XADataSourceFactoryFunc.class.getName()),
-                    XADataSourceFactoryFunc.class.getName().concat(" cannot find the implementation class")
+                    XADataSourceFactoryFunc.class.getName().concat(" is missing")
             );
             druidDataSource = ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class).getDruidDataSource(dataSource);
-            Asserts.check(druidDataSource != null, "druidDataSource cannot be null");
+            Asserts.check(druidDataSource != null, "dataSource is null");
         }
         return druidDataSource;
     }

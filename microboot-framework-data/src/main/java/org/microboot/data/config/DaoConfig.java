@@ -69,10 +69,10 @@ public class DaoConfig {
         if (dataSourceFactory.isEnableXA()) {
             Asserts.check(
                     ApplicationContextHolder.getApplicationContext().containsLocalBean(XADataSourceFactoryFunc.class.getName()),
-                    XADataSourceFactoryFunc.class.getName().concat(" cannot find the implementation class")
+                    XADataSourceFactoryFunc.class.getName().concat(" is missing")
             );
             dataSource = ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class).rebuildDataSource(dataSource);
-            Asserts.check(dataSource != null, "dataSource cannot be null");
+            Asserts.check(dataSource != null, "dataSource is null");
         }
         return dataSource;
     }
@@ -109,10 +109,10 @@ public class DaoConfig {
                 if (dataSourceFactory.isEnableXA()) {
                     Asserts.check(
                             ApplicationContextHolder.getApplicationContext().containsLocalBean(XADataSourceFactoryFunc.class.getName()),
-                            XADataSourceFactoryFunc.class.getName().concat(" cannot find the implementation class")
+                            XADataSourceFactoryFunc.class.getName().concat(" is missing")
                     );
                     dataSource = ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class).rebuildDataSource(dataSource);
-                    Asserts.check(dataSource != null, "dataSource cannot be null");
+                    Asserts.check(dataSource != null, "dataSource is null");
                 }
                 putDataSourceMap(dataSourceMap, dataSource);
             }
@@ -140,10 +140,10 @@ public class DaoConfig {
                 if (dataSourceFactory.isEnableXA()) {
                     Asserts.check(
                             ApplicationContextHolder.getApplicationContext().containsLocalBean(XADataSourceFactoryFunc.class.getName()),
-                            XADataSourceFactoryFunc.class.getName().concat(" cannot find the implementation class")
+                            XADataSourceFactoryFunc.class.getName().concat(" is missing")
                     );
                     dataSource = ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class).rebuildDataSource(dataSource);
-                    Asserts.check(dataSource != null, "dataSource cannot be null");
+                    Asserts.check(dataSource != null, "dataSource is null");
                 }
                 putDataSourceMap(dataSourceMap, dataSource);
             }
@@ -261,7 +261,7 @@ public class DaoConfig {
         } else {
             Asserts.check(
                     ApplicationContextHolder.getApplicationContext().containsLocalBean(XADataSourceFactoryFunc.class.getName()),
-                    XADataSourceFactoryFunc.class.getName().concat(" cannot find the implementation class")
+                    XADataSourceFactoryFunc.class.getName().concat(" is missing")
             );
             ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class).putDataSourceMap(dataSourceMap, dataSource);
         }

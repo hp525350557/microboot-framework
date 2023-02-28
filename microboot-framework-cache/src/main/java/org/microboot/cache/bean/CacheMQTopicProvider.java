@@ -13,7 +13,7 @@ import javax.jms.MapMessage;
 public class CacheMQTopicProvider {
 
     /**
-     * * 向默认队列发送消息
+     * 向默认队列发送消息
      * JmsTemplate交由SpringBoot自动装配，不再手动创建
      *
      * @param uniqueId
@@ -21,9 +21,6 @@ public class CacheMQTopicProvider {
      * @param value
      */
     public void publish(final String uniqueId, final Object key, final Object value) {
-        if (ApplicationContextHolder.getBean(JmsTemplate.class).getDefaultDestination() == null) {
-            return;
-        }
         ApplicationContextHolder.getBean(JmsTemplate.class).send(session -> {
             MapMessage mapMessage = session.createMapMessage();
             mapMessage.setString("uniqueId", uniqueId);

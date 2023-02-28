@@ -60,9 +60,9 @@ public class CacheConfig {
      * @param environment
      * @return
      */
-    @ConditionalOnProperty(name = {"cache.activemq.using", "spring.jms.pub-sub-domain"}, havingValue = "true")
-    @ConditionalOnMissingBean(ActiveMQTopic.class)
     @Bean(name = "activeMQTopic")
+    @ConditionalOnMissingBean(ActiveMQTopic.class)
+    @ConditionalOnProperty(name = {"cache.activemq.using", "spring.jms.pub-sub-domain"}, havingValue = "true")
     public ActiveMQTopic initActiveMQTopic(JmsTemplate jmsTemplate, Environment environment) {
         ActiveMQTopic activeMQTopic = new ActiveMQTopic(StringUtils.isBlank(environment.getProperty("cache.activemq.topic"))
                 ? CacheConstant.DEFAULT_ACTIVEMQ_TOPIC : environment.getProperty("cache.activemq.topic"));
@@ -78,8 +78,8 @@ public class CacheConfig {
      * @param localCacheImpl
      * @return
      */
-    @ConditionalOnProperty(name = {"cache.activemq.using", "spring.jms.pub-sub-domain"}, havingValue = "true")
     @Bean(name = "org.microboot.cache.bean.CacheMQTopicListener")
+    @ConditionalOnProperty(name = {"cache.activemq.using", "spring.jms.pub-sub-domain"}, havingValue = "true")
     public CacheMQTopicListener initCacheMQTopicListener(@Autowired(required = true) @Qualifier(value = "microboot.cache") CacheImpl cacheImpl,
                                                          @Autowired(required = false) @Qualifier(value = "microboot.local.cache") CacheImpl localCacheImpl) {
         List<Cache> caches = cacheImpl.getCaches();
@@ -105,6 +105,7 @@ public class CacheConfig {
      * @return
      */
     @Bean(name = "org.microboot.cache.bean.CacheMQTopicProvider")
+    @ConditionalOnProperty(name = {"cache.activemq.using", "spring.jms.pub-sub-domain"}, havingValue = "true")
     public CacheMQTopicProvider initCacheMQTopicProvider() {
         return new CacheMQTopicProvider();
     }
@@ -135,8 +136,8 @@ public class CacheConfig {
      * @return
      * @throws ClassNotFoundException
      */
-    @ConditionalOnProperty(name = "cache.local.class")
     @Bean(name = "microboot.local.cache")
+    @ConditionalOnProperty(name = "cache.local.class")
     public CacheImpl initLocalCacheImpl(Environment environment) throws ClassNotFoundException {
         String classNames = environment.getProperty("cache.local.class");
         List<Cache> cacheList = getCacheList(classNames, true);
@@ -154,8 +155,8 @@ public class CacheConfig {
      * @return
      * @throws ClassNotFoundException
      */
-    @ConditionalOnProperty(name = "cache.central.class")
     @Bean(name = "microboot.central.cache")
+    @ConditionalOnProperty(name = "cache.central.class")
     public CacheImpl initCentralCacheImpl(Environment environment) throws ClassNotFoundException {
         String classNames = environment.getProperty("cache.central.class");
         List<Cache> cacheList = getCacheList(classNames, false);
@@ -237,8 +238,8 @@ public class CacheConfig {
      * @return
      */
     @SuppressWarnings("rawtypes")
-    @ConditionalOnProperty(name = "cache.caffeine.using", havingValue = "true")
     @Bean(name = "com.github.benmanes.caffeine.cache.Caffeine")
+    @ConditionalOnProperty(name = "cache.caffeine.using", havingValue = "true")
     public Caffeine initCaffeine(CacheProperties cacheProperties) {
         Caffeine caffeine;
         if (cacheProperties != null) {
@@ -257,8 +258,8 @@ public class CacheConfig {
      * @return
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
-    @ConditionalOnProperty(name = "cache.caffeine.using", havingValue = "true")
     @Bean(name = "org.springframework.cache.caffeine.CaffeineCache")
+    @ConditionalOnProperty(name = "cache.caffeine.using", havingValue = "true")
     public CaffeineCache initCaffeineCache(Caffeine caffeine, Environment environment) {
         boolean caffeineAllowNullValues = StringUtils.isBlank(environment.getProperty("cache.caffeine.allow-null-values"))
                 ? CacheConstant.DEFAULT_CAFFEINE_ALLOW_NULL_VALUES : Boolean.parseBoolean(environment.getProperty("cache.caffeine.allow-null-values"));
@@ -275,8 +276,8 @@ public class CacheConfig {
      * @param environment
      * @return
      */
-    @ConditionalOnProperty(name = "cache.caffeine.using", havingValue = "true")
     @Bean(name = "org.microboot.cache.impl.caffeine.CaffeineImpl")
+    @ConditionalOnProperty(name = "cache.caffeine.using", havingValue = "true")
     public CaffeineImpl initCaffeineImpl(CaffeineCache caffeineCache, Environment environment) {
         String caffeineName = StringUtils.isBlank(environment.getProperty("cache.caffeine.name"))
                 ? CacheConstant.DEFAULT_CAFFEINE_NAME : environment.getProperty("cache.caffeine.name");
@@ -291,8 +292,8 @@ public class CacheConfig {
      * @return
      * @throws Exception
      */
-    @ConditionalOnProperty(name = "cache.ehcache.using", havingValue = "true")
     @Bean(name = "org.springframework.cache.ehcache.EhCacheManagerFactoryBean")
+    @ConditionalOnProperty(name = "cache.ehcache.using", havingValue = "true")
     public EhCacheManagerFactoryBean initEhCacheManagerFactoryBean(Environment environment) throws Exception {
         String ehcacheXML = StringUtils.isBlank(environment.getProperty("cache.ehcache.xml"))
                 ? CacheConstant.DEFAULT_EHCACHE_XML : environment.getProperty("cache.ehcache.xml");
@@ -309,8 +310,8 @@ public class CacheConfig {
      * @param environment
      * @return
      */
-    @ConditionalOnProperty(name = "cache.ehcache.using", havingValue = "true")
     @Bean(name = "org.springframework.cache.ehcache.EhCacheFactoryBean")
+    @ConditionalOnProperty(name = "cache.ehcache.using", havingValue = "true")
     public EhCacheFactoryBean initEhCacheFactoryBean(EhCacheManagerFactoryBean ehCacheManagerFactoryBean, Environment environment) {
         String ehcacheName = StringUtils.isBlank(environment.getProperty("cache.ehcache.name"))
                 ? CacheConstant.DEFAULT_EHCACHE_NAME : environment.getProperty("cache.ehcache.name");
@@ -326,8 +327,8 @@ public class CacheConfig {
      * @param ehCacheFactoryBean
      * @return
      */
-    @ConditionalOnProperty(name = "cache.ehcache.using", havingValue = "true")
     @Bean(name = "org.microboot.cache.impl.ehcache.EhcacheImpl")
+    @ConditionalOnProperty(name = "cache.ehcache.using", havingValue = "true")
     public EhcacheImpl initEhcacheImpl(EhCacheFactoryBean ehCacheFactoryBean, Environment environment) {
         String ehcacheName = StringUtils.isBlank(environment.getProperty("cache.ehcache.name"))
                 ? CacheConstant.DEFAULT_EHCACHE_NAME : environment.getProperty("cache.ehcache.name");
@@ -342,8 +343,8 @@ public class CacheConfig {
      * @return
      * @throws Exception
      */
-    @ConditionalOnProperty(name = "cache.memcached.using", havingValue = "true")
     @Bean(name = "org.microboot.cache.impl.memcached.MemcachedImpl")
+    @ConditionalOnProperty(name = "cache.memcached.using", havingValue = "true")
     public MemcachedImpl initMemcachedImpl(MemcachedClientFactoryBean memcachedClientFactoryBean, Environment environment) throws Exception {
         int cacheExpire = StringUtils.isBlank(environment.getProperty("cache.memcached.expire"))
                 ? CacheConstant.DEFAULT_CACHE_EXPIRE : Integer.parseInt(environment.getProperty("cache.memcached.expire"));
@@ -359,8 +360,8 @@ public class CacheConfig {
      * @param redisConnectionFactory
      * @return
      */
-    @ConditionalOnProperty(name = "cache.redis.using", havingValue = "true")
     @Bean(name = "org.springframework.data.redis.core.RedisTemplate")
+    @ConditionalOnProperty(name = "cache.redis.using", havingValue = "true")
     public RedisTemplate<String, Object> initRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory);
@@ -380,8 +381,8 @@ public class CacheConfig {
      * @param environment
      * @return
      */
-    @ConditionalOnProperty(name = "cache.redis.using", havingValue = "true")
     @Bean(name = "org.microboot.cache.impl.redis.RedisImpl")
+    @ConditionalOnProperty(name = "cache.redis.using", havingValue = "true")
     public RedisImpl initRedisCacheImpl(RedisTemplate<String, Object> redisTemplate, Environment environment) {
         int cacheExpire = StringUtils.isBlank(environment.getProperty("cache.redis.name"))
                 ? CacheConstant.DEFAULT_CACHE_EXPIRE : Integer.parseInt(environment.getProperty("cache.redis.expire"));
