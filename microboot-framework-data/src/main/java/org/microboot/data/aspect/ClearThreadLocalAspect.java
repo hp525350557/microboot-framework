@@ -14,7 +14,11 @@ import org.springframework.core.annotation.Order;
 @Order(0)
 public class ClearThreadLocalAspect {
 
-    @Pointcut("@within(org.microboot.data.annotation.ClearThreadLocal)")
+    /**
+     * @within对象级别
+     * @annotation方法级别
+     */
+    @Pointcut("@within(org.microboot.data.annotation.ClearThreadLocal) || @annotation(org.microboot.data.annotation.ClearThreadLocal)")
     public void cut() {
     }
 
