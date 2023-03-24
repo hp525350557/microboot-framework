@@ -9,7 +9,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.http.util.Asserts;
 import org.microboot.core.bean.ApplicationContextHolder;
 import org.microboot.core.constant.Constant;
-import org.microboot.data.aspect.ClearThreadLocalAspect;
 import org.microboot.data.basedao.BaseDao;
 import org.microboot.data.factory.DataSourceFactory;
 import org.microboot.data.func.XADataSourceFactoryFunc;
@@ -34,16 +33,6 @@ import java.util.Properties;
 @Configuration
 @DependsOn(Constant.APPLICATION_CONTEXT_HOLDER)
 public class DaoConfig {
-
-    /**
-     * 初始化ClearThreadLocalAspect
-     *
-     * @return
-     */
-    @Bean(name = "org.microboot.data.aspect.ClearThreadLocalAspect")
-    public ClearThreadLocalAspect initClearThreadLocalAspect() {
-        return new ClearThreadLocalAspect();
-    }
 
     /**
      * 初始化DataSourceFactory

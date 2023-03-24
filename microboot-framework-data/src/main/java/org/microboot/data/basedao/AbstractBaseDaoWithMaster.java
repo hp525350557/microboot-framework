@@ -2,14 +2,11 @@ package org.microboot.data.basedao;
 
 import com.google.common.collect.Maps;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.microboot.core.bean.ApplicationContextHolder;
 import org.microboot.core.constant.Constant;
 import org.microboot.core.entity.Page;
 import org.microboot.core.utils.ConvertUtils;
 import org.springframework.jdbc.core.ResultSetExtractor;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 
@@ -18,10 +15,44 @@ import java.util.Map;
 
 /**
  * @author 胡鹏
+ *
+ * microboot框架在搭建的时候，就把主从读写分离的方案纳入进来了
+ * 主从读写分离的问题：
+ * Mysql主从同步是有延时的，因此当一个事务中，先执行execute方法将数据写到主库，然后query方法查询数据
+ * 如果读取的是从库（读库），那么很可能会因为同步延时而导致读取不到
+ *
+ * 版本一解决方案：
+ * 在BaseDao的继承关系中，加入了TransmittableThreadLocal作为父类
+ * 让BaseDao本身也是一个ThreadLocal
+ * 每次执行execute方法时，将写库的连接记录下来，并通过TransmittableThreadLocal进行传播
+ * 每次执行query方法时，先查看TransmittableThreadLocal中有没有数据库连接，如果就表示先执行了增删改操作
+ * 那么查询时直接沿用写库的连接去进行查询数据，如果没有才去获取从库的连接进行读数据
+ * 为了避免ThreadLocal可能出现的内存泄露，同时也因为Spring使用了线程池，线程总是复用
+ * 所以又自定义了一个ClearThreadLocal注解和相应的Spring切面
+ * 在切面中，将每次存在本次线程中的写库连接remove掉
+ * 最后在Service类或方法上加上这个注解，即可
+ *
+ * 版本一的问题：
+ * 在版本一的切面中，只是进行了简单的删除，但是后来又发现了问题
+ * 当在Service类上加上ClearThreadLocal注解后，每个service方法都会被代理
+ * 如果在service方法中有嵌套执行，比如：A() -> B()
+ * 那么切面中的remove会执行两次
+ *
+ * 版本二解决方案：
+ * 为了解决上面的问题，版本二准备在切面中记录最外层的方法，只有当最外层方法执行完时，才去调用TransmittableThreadLocal的remove方法
+ *
+ * 版本二的问题：
+ * 虽然解决了嵌套调用的问题，但是如果遇到多线程，又会有问题了
+ * 比如：A() -> thread(() -> b()).start()
+ * 如果，此时如果A()方法先执行完，此时A()可能不会去执行TransmittableThreadLocal的remove方法，导致不可遇见的问题
+ *
+ * 现版本解决方案：
+ * 由于上面的方案有这么多的问题，于是决定不再使用TransmittableThreadLocal来解决主从延时问题
+ * 而是像Slaves库，Others库一样，再定义一个AbstractBaseDaoWithMaster类
+ * 让原本的query方法默认获取从库连接，而AbstractBaseDaoWithMaster类中的query方法默认使用主库连接
+ * 交由上层业务开发去决定
  */
-public class BaseDao extends AbstractBaseDaoWithMaster {
-
-    private final Logger logger = LogManager.getLogger(this.getClass());
+public abstract class AbstractBaseDaoWithMaster extends AbstractBaseDaoWithSlaves {
 
     /**
      * @param templateName
@@ -29,8 +60,8 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public List<Map<String, Object>> queryForList(String templateName, Map<String, ?> parameters) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+    public List<Map<String, Object>> queryForListWithMaster(String templateName, Map<String, ?> parameters) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.MASTER_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
         return this.queryForList(templateName, parameters, namedParameterJdbcTemplate);
     }
 
@@ -40,12 +71,12 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public List<Map<String, Object>> queryForList(String templateName, Object javaBean) throws Exception {
+    public List<Map<String, Object>> queryForListWithMaster(String templateName, Object javaBean) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.queryForList(templateName, parameters);
+        return this.queryForListWithMaster(templateName, parameters);
     }
 
     /**
@@ -55,13 +86,13 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public List<Map<String, Object>> queryForList(String templateName, String paramKey, Object paramValue) throws Exception {
+    public List<Map<String, Object>> queryForListWithMaster(String templateName, String paramKey, Object paramValue) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
             throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
-        return this.queryForList(templateName, parameters);
+        return this.queryForListWithMaster(templateName, parameters);
     }
 
     /**
@@ -72,8 +103,8 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public <T> List<T> queryForList(String templateName, Map<String, ?> parameters, Class<T> clazz) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+    public <T> List<T> queryForListWithMaster(String templateName, Map<String, ?> parameters, Class<T> clazz) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.MASTER_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
         return this.queryForList(templateName, parameters, clazz, namedParameterJdbcTemplate);
     }
 
@@ -85,12 +116,12 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public <T> List<T> queryForList(String templateName, Object javaBean, Class<T> clazz) throws Exception {
+    public <T> List<T> queryForListWithMaster(String templateName, Object javaBean, Class<T> clazz) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.queryForList(templateName, parameters, clazz);
+        return this.queryForListWithMaster(templateName, parameters, clazz);
     }
 
     /**
@@ -102,13 +133,13 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public <T> List<T> queryForList(String templateName, String paramKey, Object paramValue, Class<T> clazz) throws Exception {
+    public <T> List<T> queryForListWithMaster(String templateName, String paramKey, Object paramValue, Class<T> clazz) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
             throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
-        return this.queryForList(templateName, parameters, clazz);
+        return this.queryForListWithMaster(templateName, parameters, clazz);
     }
 
     /**
@@ -117,8 +148,8 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public Map<String, Object> queryForMap(String templateName, Map<String, ?> parameters) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+    public Map<String, Object> queryForMapWithMaster(String templateName, Map<String, ?> parameters) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.MASTER_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
         return this.queryForMap(templateName, parameters, namedParameterJdbcTemplate);
     }
 
@@ -128,12 +159,12 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public Map<String, Object> queryForMap(String templateName, Object javaBean) throws Exception {
+    public Map<String, Object> queryForMapWithMaster(String templateName, Object javaBean) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.queryForMap(templateName, parameters);
+        return this.queryForMapWithMaster(templateName, parameters);
     }
 
     /**
@@ -143,13 +174,13 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public Map<String, Object> queryForMap(String templateName, String paramKey, Object paramValue) throws Exception {
+    public Map<String, Object> queryForMapWithMaster(String templateName, String paramKey, Object paramValue) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
             throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
-        return this.queryForMap(templateName, parameters);
+        return this.queryForMapWithMaster(templateName, parameters);
     }
 
     /**
@@ -160,8 +191,8 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public <T> T queryForObject(String templateName, Map<String, ?> parameters, Class<T> clazz) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+    public <T> T queryForObjectWithMaster(String templateName, Map<String, ?> parameters, Class<T> clazz) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.MASTER_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
         return this.queryForObject(templateName, parameters, clazz, namedParameterJdbcTemplate);
     }
 
@@ -173,12 +204,12 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public <T> T queryForObject(String templateName, Object javaBean, Class<T> clazz) throws Exception {
+    public <T> T queryForObjectWithMaster(String templateName, Object javaBean, Class<T> clazz) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.queryForObject(templateName, parameters, clazz);
+        return this.queryForObjectWithMaster(templateName, parameters, clazz);
     }
 
     /**
@@ -190,13 +221,13 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public <T> T queryForObject(String templateName, String paramKey, Object paramValue, Class<T> clazz) throws Exception {
+    public <T> T queryForObjectWithMaster(String templateName, String paramKey, Object paramValue, Class<T> clazz) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
             throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
-        return this.queryForObject(templateName, parameters, clazz);
+        return this.queryForObjectWithMaster(templateName, parameters, clazz);
     }
 
     /**
@@ -207,8 +238,8 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public <T> T query(String templateName, Map<String, ?> parameters, ResultSetExtractor<T> rse) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+    public <T> T queryWithMaster(String templateName, Map<String, ?> parameters, ResultSetExtractor<T> rse) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.MASTER_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
         return this.query(templateName, parameters, namedParameterJdbcTemplate, rse);
     }
 
@@ -220,12 +251,12 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public <T> T query(String templateName, Object javaBean, ResultSetExtractor<T> rse) throws Exception {
+    public <T> T queryWithMaster(String templateName, Object javaBean, ResultSetExtractor<T> rse) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.query(templateName, parameters, rse);
+        return this.queryWithMaster(templateName, parameters, rse);
     }
 
     /**
@@ -237,13 +268,13 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public <T> T query(String templateName, String paramKey, Object paramValue, ResultSetExtractor<T> rse) throws Exception {
+    public <T> T queryWithMaster(String templateName, String paramKey, Object paramValue, ResultSetExtractor<T> rse) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
             throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
-        return this.query(templateName, parameters, rse);
+        return this.queryWithMaster(templateName, parameters, rse);
     }
 
     /**
@@ -252,8 +283,8 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public SqlRowSet queryForSqlRowSet(String templateName, Map<String, ?> parameters) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+    public SqlRowSet queryForSqlRowSetWithMaster(String templateName, Map<String, ?> parameters) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.MASTER_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
         return this.queryForSqlRowSet(templateName, parameters, namedParameterJdbcTemplate);
     }
 
@@ -263,12 +294,12 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public SqlRowSet queryForSqlRowSet(String templateName, Object javaBean) throws Exception {
+    public SqlRowSet queryForSqlRowSetWithMaster(String templateName, Object javaBean) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.queryForSqlRowSet(templateName, parameters);
+        return this.queryForSqlRowSetWithMaster(templateName, parameters);
     }
 
     /**
@@ -278,13 +309,13 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public SqlRowSet queryForSqlRowSet(String templateName, String paramKey, Object paramValue) throws Exception {
+    public SqlRowSet queryForSqlRowSetWithMaster(String templateName, String paramKey, Object paramValue) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
             throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
-        return this.queryForSqlRowSet(templateName, parameters);
+        return this.queryForSqlRowSetWithMaster(templateName, parameters);
     }
 
     /**
@@ -294,8 +325,8 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public Page pagination(String paginationCount, String pagination, Map<String, ?> parameters) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+    public Page paginationWithMaster(String paginationCount, String pagination, Map<String, ?> parameters) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.MASTER_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
         return this.pagination(paginationCount, pagination, parameters, namedParameterJdbcTemplate);
     }
 
@@ -306,12 +337,12 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public Page pagination(String paginationCount, String pagination, Object javaBean) throws Exception {
+    public Page paginationWithMaster(String paginationCount, String pagination, Object javaBean) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.pagination(paginationCount, pagination, parameters);
+        return this.paginationWithMaster(paginationCount, pagination, parameters);
     }
 
     /**
@@ -320,8 +351,8 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public List<Map<String, Object>> queryForListBySql(String sql, Map<String, ?> parameters) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+    public List<Map<String, Object>> queryForListBySqlWithMaster(String sql, Map<String, ?> parameters) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.MASTER_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
         return this.queryForListBySql(sql, parameters, namedParameterJdbcTemplate);
     }
 
@@ -331,12 +362,12 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public List<Map<String, Object>> queryForListBySql(String sql, Object javaBean) throws Exception {
+    public List<Map<String, Object>> queryForListBySqlWithMaster(String sql, Object javaBean) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.queryForListBySql(sql, parameters);
+        return this.queryForListBySqlWithMaster(sql, parameters);
     }
 
     /**
@@ -346,13 +377,13 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public List<Map<String, Object>> queryForListBySql(String sql, String paramKey, Object paramValue) throws Exception {
+    public List<Map<String, Object>> queryForListBySqlWithMaster(String sql, String paramKey, Object paramValue) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
             throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
-        return this.queryForListBySql(sql, parameters);
+        return this.queryForListBySqlWithMaster(sql, parameters);
     }
 
     /**
@@ -363,8 +394,8 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public <T> List<T> queryForListBySql(String sql, Map<String, ?> parameters, Class<T> clazz) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+    public <T> List<T> queryForListBySqlWithMaster(String sql, Map<String, ?> parameters, Class<T> clazz) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.MASTER_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
         return this.queryForListBySql(sql, parameters, clazz, namedParameterJdbcTemplate);
     }
 
@@ -376,12 +407,12 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public <T> List<T> queryForListBySql(String sql, Object javaBean, Class<T> clazz) throws Exception {
+    public <T> List<T> queryForListBySqlWithMaster(String sql, Object javaBean, Class<T> clazz) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.queryForListBySql(sql, parameters, clazz);
+        return this.queryForListBySqlWithMaster(sql, parameters, clazz);
     }
 
     /**
@@ -393,13 +424,13 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public <T> List<T> queryForListBySql(String sql, String paramKey, Object paramValue, Class<T> clazz) throws Exception {
+    public <T> List<T> queryForListBySqlWithMaster(String sql, String paramKey, Object paramValue, Class<T> clazz) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
             throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
-        return this.queryForListBySql(sql, parameters, clazz);
+        return this.queryForListBySqlWithMaster(sql, parameters, clazz);
     }
 
     /**
@@ -408,8 +439,8 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public Map<String, Object> queryForMapBySql(String sql, Map<String, ?> parameters) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+    public Map<String, Object> queryForMapBySqlWithMaster(String sql, Map<String, ?> parameters) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.MASTER_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
         return this.queryForMapBySql(sql, parameters, namedParameterJdbcTemplate);
     }
 
@@ -419,12 +450,12 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public Map<String, Object> queryForMapBySql(String sql, Object javaBean) throws Exception {
+    public Map<String, Object> queryForMapBySqlWithMaster(String sql, Object javaBean) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.queryForMapBySql(sql, parameters);
+        return this.queryForMapBySqlWithMaster(sql, parameters);
     }
 
     /**
@@ -434,13 +465,13 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public Map<String, Object> queryForMapBySql(String sql, String paramKey, Object paramValue) throws Exception {
+    public Map<String, Object> queryForMapBySqlWithMaster(String sql, String paramKey, Object paramValue) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
             throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
-        return this.queryForMapBySql(sql, parameters);
+        return this.queryForMapBySqlWithMaster(sql, parameters);
     }
 
     /**
@@ -451,8 +482,8 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public <T> T queryForObjectBySql(String sql, Map<String, ?> parameters, Class<T> clazz) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+    public <T> T queryForObjectBySqlWithMaster(String sql, Map<String, ?> parameters, Class<T> clazz) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.MASTER_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
         return this.queryForObjectBySql(sql, parameters, clazz, namedParameterJdbcTemplate);
     }
 
@@ -464,12 +495,12 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public <T> T queryForObjectBySql(String sql, Object javaBean, Class<T> clazz) throws Exception {
+    public <T> T queryForObjectBySqlWithMaster(String sql, Object javaBean, Class<T> clazz) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.queryForObjectBySql(sql, parameters, clazz);
+        return this.queryForObjectBySqlWithMaster(sql, parameters, clazz);
     }
 
     /**
@@ -481,13 +512,13 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public <T> T queryForObjectBySql(String sql, String paramKey, Object paramValue, Class<T> clazz) throws Exception {
+    public <T> T queryForObjectBySqlWithMaster(String sql, String paramKey, Object paramValue, Class<T> clazz) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
             throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
-        return this.queryForObjectBySql(sql, parameters, clazz);
+        return this.queryForObjectBySqlWithMaster(sql, parameters, clazz);
     }
 
     /**
@@ -498,8 +529,8 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public <T> T queryBySql(String sql, Map<String, ?> parameters, ResultSetExtractor<T> rse) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+    public <T> T queryBySqlWithMaster(String sql, Map<String, ?> parameters, ResultSetExtractor<T> rse) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.MASTER_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
         return this.queryBySql(sql, parameters, namedParameterJdbcTemplate, rse);
     }
 
@@ -511,12 +542,12 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public <T> T queryBySql(String sql, Object javaBean, ResultSetExtractor<T> rse) throws Exception {
+    public <T> T queryBySqlWithMaster(String sql, Object javaBean, ResultSetExtractor<T> rse) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.queryBySql(sql, parameters, rse);
+        return this.queryBySqlWithMaster(sql, parameters, rse);
     }
 
     /**
@@ -528,13 +559,13 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public <T> T queryBySql(String sql, String paramKey, Object paramValue, ResultSetExtractor<T> rse) throws Exception {
+    public <T> T queryBySqlWithMaster(String sql, String paramKey, Object paramValue, ResultSetExtractor<T> rse) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
             throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
-        return this.queryBySql(sql, parameters, rse);
+        return this.queryBySqlWithMaster(sql, parameters, rse);
     }
 
     /**
@@ -543,8 +574,8 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public SqlRowSet queryForSqlRowSetBySql(String sql, Map<String, ?> parameters) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+    public SqlRowSet queryForSqlRowSetBySqlWithMaster(String sql, Map<String, ?> parameters) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.MASTER_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
         return this.queryForSqlRowSetBySql(sql, parameters, namedParameterJdbcTemplate);
     }
 
@@ -554,12 +585,12 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public SqlRowSet queryForSqlRowSetBySql(String sql, Object javaBean) throws Exception {
+    public SqlRowSet queryForSqlRowSetBySqlWithMaster(String sql, Object javaBean) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.queryForSqlRowSetBySql(sql, parameters);
+        return this.queryForSqlRowSetBySqlWithMaster(sql, parameters);
     }
 
     /**
@@ -569,13 +600,13 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public SqlRowSet queryForSqlRowSetBySql(String sql, String paramKey, Object paramValue) throws Exception {
+    public SqlRowSet queryForSqlRowSetBySqlWithMaster(String sql, String paramKey, Object paramValue) throws Exception {
         if (StringUtils.isBlank(paramKey)) {
             throw new IllegalArgumentException("paramKey must not be null");
         }
         Map<String, Object> parameters = Maps.newHashMap();
         parameters.put(paramKey, paramValue);
-        return this.queryForSqlRowSetBySql(sql, parameters);
+        return this.queryForSqlRowSetBySqlWithMaster(sql, parameters);
     }
 
     /**
@@ -585,8 +616,8 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public Page paginationBySql(String paginationCountSql, String paginationSql, Map<String, ?> parameters) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+    public Page paginationBySqlWithMaster(String paginationCountSql, String paginationSql, Map<String, ?> parameters) throws Exception {
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.MASTER_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
         return this.paginationBySql(paginationCountSql, paginationSql, parameters, namedParameterJdbcTemplate);
     }
 
@@ -597,137 +628,11 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @return
      * @throws Exception
      */
-    public Page paginationBySql(String paginationCountSql, String paginationSql, Object javaBean) throws Exception {
+    public Page paginationBySqlWithMaster(String paginationCountSql, String paginationSql, Object javaBean) throws Exception {
         /*
          * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
          */
         Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.paginationBySql(paginationCountSql, paginationSql, parameters);
-    }
-
-    /**
-     * @param templateName
-     * @param parameters
-     * @return
-     * @throws Exception
-     */
-    public int execute(String templateName, Map<String, ?> parameters) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.MASTER_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
-        return this.execute(templateName, parameters, namedParameterJdbcTemplate);
-    }
-
-    /**
-     * @param templateName
-     * @param javaBean
-     * @return
-     * @throws Exception
-     */
-    public int execute(String templateName, Object javaBean) throws Exception {
-        /*
-         * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
-         */
-        Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.execute(templateName, parameters);
-    }
-
-    /**
-     * @param templateName
-     * @param paramKey
-     * @param paramValue
-     * @return
-     * @throws Exception
-     */
-    public int execute(String templateName, String paramKey, Object paramValue) throws Exception {
-        if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("paramKey must not be null");
-        }
-        Map<String, Object> parameters = Maps.newHashMap();
-        parameters.put(paramKey, paramValue);
-        return this.execute(templateName, parameters);
-    }
-
-    /**
-     * @param templateName
-     * @param parameterSource
-     * @return
-     * @throws Exception
-     */
-    public int execute(String templateName, MapSqlParameterSource parameterSource) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.MASTER_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
-        return this.execute(templateName, parameterSource, namedParameterJdbcTemplate);
-    }
-
-    /**
-     * @param templateName
-     * @param parametersList
-     * @return
-     * @throws Exception
-     */
-    public int[] executeBatch(String templateName, List<?> parametersList) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.MASTER_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
-        return this.executeBatch(templateName, parametersList, namedParameterJdbcTemplate);
-    }
-
-    /**
-     * @param sql
-     * @param parameters
-     * @return
-     * @throws Exception
-     */
-    public int executeBySql(String sql, Map<String, ?> parameters) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.MASTER_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
-        return this.executeBySql(sql, parameters, namedParameterJdbcTemplate);
-    }
-
-    /**
-     * @param sql
-     * @param javaBean
-     * @return
-     * @throws Exception
-     */
-    public int executeBySql(String sql, Object javaBean) throws Exception {
-        /*
-         * 实体传参还可以用BeanPropertySqlParameterSource来封装javaBean
-         */
-        Map<String, Object> parameters = ConvertUtils.bean2Map(javaBean);
-        return this.executeBySql(sql, parameters);
-    }
-
-    /**
-     * @param sql
-     * @param paramKey
-     * @param paramValue
-     * @return
-     * @throws Exception
-     */
-    public int executeBySql(String sql, String paramKey, Object paramValue) throws Exception {
-        if (StringUtils.isBlank(paramKey)) {
-            throw new IllegalArgumentException("paramKey must not be null");
-        }
-        Map<String, Object> parameters = Maps.newHashMap();
-        parameters.put(paramKey, paramValue);
-        return this.executeBySql(sql, parameters);
-    }
-
-    /**
-     * @param sql
-     * @param parameterSource
-     * @return
-     * @throws Exception
-     */
-    public int executeBySql(String sql, MapSqlParameterSource parameterSource) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.MASTER_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
-        return this.executeBySql(sql, parameterSource, namedParameterJdbcTemplate);
-    }
-
-    /**
-     * @param sql
-     * @param parametersList
-     * @return
-     * @throws Exception
-     */
-    public int[] executeBatchBySql(String sql, List<?> parametersList) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.MASTER_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
-        return this.executeBatchBySql(sql, parametersList, namedParameterJdbcTemplate);
+        return this.paginationBySqlWithMaster(paginationCountSql, paginationSql, parameters);
     }
 }

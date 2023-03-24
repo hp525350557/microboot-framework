@@ -1,10 +1,8 @@
 package org.microboot.data.basedao;
 
-import com.alibaba.ttl.TransmittableThreadLocal;
 import com.google.common.collect.Maps;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.microboot.core.bean.ApplicationContextHolder;
@@ -28,7 +26,7 @@ import java.util.concurrent.ThreadLocalRandom;
 /**
  * @author 胡鹏
  */
-public abstract class AbstractBaseDao extends TransmittableThreadLocal<NamedParameterJdbcTemplate> {
+public abstract class AbstractBaseDao {
 
     private final Logger logger = LogManager.getLogger(this.getClass());
 
@@ -302,7 +300,6 @@ public abstract class AbstractBaseDao extends TransmittableThreadLocal<NamedPara
      */
     protected int executeBySql(String sql, Map<String, ?> parameters, NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
         logger.info(sql + " -> " + ConvertUtils.map2Json(parameters));
-        this.getOrCreate(namedParameterJdbcTemplate);
         return namedParameterJdbcTemplate.update(sql, parameters);
     }
 
@@ -328,7 +325,6 @@ public abstract class AbstractBaseDao extends TransmittableThreadLocal<NamedPara
      */
     protected int executeBySql(String sql, MapSqlParameterSource parameterSource, NamedParameterJdbcTemplate namedParameterJdbcTemplate) throws Exception {
         logger.info(sql + " -> " + ConvertUtils.object2Json(parameterSource));
-        this.getOrCreate(namedParameterJdbcTemplate);
         return namedParameterJdbcTemplate.update(sql, parameterSource);
     }
 
@@ -340,7 +336,6 @@ public abstract class AbstractBaseDao extends TransmittableThreadLocal<NamedPara
      */
     protected int[] executeBatchBySql(String sql, List<?> parametersList, NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
         logger.info(sql + " -> " + ConvertUtils.listMap2Json(parametersList));
-        this.getOrCreate(namedParameterJdbcTemplate);
         return namedParameterJdbcTemplate.batchUpdate(sql, SqlParameterSourceUtils.createBatch(parametersList));
     }
 
@@ -374,23 +369,6 @@ public abstract class AbstractBaseDao extends TransmittableThreadLocal<NamedPara
         List<Map<String, Object>> rows = namedParameterJdbcTemplate.queryForList(paginationSql, parameters);
         page.setRows(rows);
         return page;
-    }
-
-    /**
-     * @param namedParameterJdbcTemplates
-     * @return
-     */
-    protected NamedParameterJdbcTemplate getOrCreate(NamedParameterJdbcTemplate... namedParameterJdbcTemplates) {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.get();
-        if (namedParameterJdbcTemplate != null) {
-            logger.info("读Thread：" + Thread.currentThread() + "=======>" + namedParameterJdbcTemplate);
-            return namedParameterJdbcTemplate;
-        }
-        if (ArrayUtils.isNotEmpty(namedParameterJdbcTemplates)) {
-            this.set(namedParameterJdbcTemplates[0]);
-            logger.info("写Thread：" + Thread.currentThread() + "=======>" + namedParameterJdbcTemplates[0]);
-        }
-        return this.get();
     }
 
     /**

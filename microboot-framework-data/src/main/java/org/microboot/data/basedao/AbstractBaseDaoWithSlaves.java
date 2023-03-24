@@ -841,10 +841,7 @@ public abstract class AbstractBaseDaoWithSlaves extends AbstractBaseDaoWithOther
             String name = dataBaseName[0];
             namedParameterJdbcTemplate = namedParameterJdbcTemplateMap.getOrDefault(name, null);
         } else {
-            namedParameterJdbcTemplate = this.getOrCreate();
-            if (namedParameterJdbcTemplate != null) {
-                return namedParameterJdbcTemplate;
-            }
+            //不指定就随机获取一个从库
             namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplate(namedParameterJdbcTemplateMap);
         }
         if (namedParameterJdbcTemplate == null) {
