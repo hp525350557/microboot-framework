@@ -67,10 +67,12 @@ public class StartRunner implements ApplicationRunner {
         DataContainer.initMap.putAll(DataContainer.slavesMap);
         //创建同步锁
         SyncFunc syncFunc = new DefaultSyncFuncHolder();
+        //计算线程池并发度（上限是系统内核数）
+        int parallelism = Math.min(DataContainer.initMap.size(), Runtime.getRuntime().availableProcessors());
         //启动定时器
-        ScheduledThreadPoolExecutor service = new ScheduledThreadPoolExecutor(DataContainer.initMap.size());
+        ScheduledThreadPoolExecutor service = new ScheduledThreadPoolExecutor(parallelism);
         //设置最大线程数
-        service.setMaximumPoolSize(DataContainer.initMap.size());
+        service.setMaximumPoolSize(parallelism);
         //定期在连接池中测试连接，并将异常连接加入退避容器
         /*
             版本一：
