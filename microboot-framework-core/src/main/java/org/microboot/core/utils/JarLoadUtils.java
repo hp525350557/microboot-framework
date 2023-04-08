@@ -8,7 +8,9 @@ import org.microboot.core.func.FuncV1;
 
 import java.io.File;
 import java.lang.reflect.Method;
-import java.net.*;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -27,6 +29,75 @@ import java.util.concurrent.ConcurrentHashMap;
  * 参考案例关注一下URLClassPath的内部类JarLoader的csu属性，它里面存了加载的jar包路径
  * 这个方案看上去合理，但实验后还是不行，只是作为一个学习参考记录在这吧
  * 】
+ *
+ * 老版本的InnerURLClassLoader中，加载和卸载Jar如下：
+ *
+ * private JarURLConnection jarURLConnection = null;
+ *
+ * private void loadJar(URL url) {
+ *     try {
+ *         //打开文件url连接
+ *         URLConnection urlConnection = url.openConnection();
+ *         if (urlConnection instanceof JarURLConnection) {
+ *             urlConnection.setUseCaches(true);
+ *             ((JarURLConnection) urlConnection).getManifest();
+ *             this.jarURLConnection = (JarURLConnection) urlConnection;
+ *         }
+ *         //将指定的URL添加到URL列表中，以便搜索类和资源。
+ *         this.addURL(url);
+ *     } catch (Exception e) {
+ *         LoggerUtils.error(logger, e);
+ *     }
+ * }
+ *
+ * private void unloadJar() {
+ *     if (this.jarURLConnection == null) {
+ *         return;
+ *     }
+ *     try {
+ *         this.jarURLConnection.getJarFile().close();
+ *         this.jarURLConnection = null;
+ *     } catch (Exception e) {
+ *         LoggerUtils.error(logger, e);
+ *     }
+ * }
+ *
+ * 加载Jar包时：通过URL对象获取Jar包的连接并保存，但加载Jar包的核心是this.addURL(url)
+ * 卸载Jar包时：关闭连接
+ * 问：为什么要获取并保存JarURLConnection对象？
+ * 答：因为在Windows上如果某个文件被访问则无法删除。
+ * 在microboot定时任务模块中，有一个功能需要热更新外部插件Jar包中的class
+ * 如果无法删除Jar包，则无法实现热更新
+ *
+ * 但从JDK1.7开始，URLClassLoader就提供了close()方法用来释放ClassLoader的资源，因此不需要上面那么复杂
+ *
+ * 扩展：
+ *     JarLoadUtils并不是真正的热更新，只是利用了JVM中不同ClassLoader对象可以加载同一个class文件的特点【因为ClassLoader的缓存和ClassLoader的对象绑定】
+ *     由于在unloadJar方法中删除了老的InnerURLClassLoader对象，当再次调用loadJar时会创建一个新的InnerURLClassLoader对象
+ *     当使用新的InnerURLClassLoader对象再次加载Class时，导致JVM方法区中同一个Class文件会有两个不同的Class对象
+ *     但因为老的InnerURLClassLoader对象已经从Map中移除，没有引用指向它，当执行GC之后就会回收，连带它加载的Class也会被回收【前提是老的Class没有存活的实例对象了】
+ *     因此InnerURLClassLoader加载的Class并不是在断开Jar包连接或者InnerURLClassLoader被close时被删除的
+ *     所以JarLoadUtils的热更新和Arthas的热更新是不同的，Arthas的热更新是用了Java的Agent机制，是直接替换了JVM方法区的Class信息，所以是实时的
+ *
+ * 遇到问题：
+ *     microboot的定时任务执行过程中，InnerURLClassLoader对象却一直不回收，每加载一次Jar包，内存中就多出一个InnerURLClassLoader对象
+ * 实验结果：
+ *     InnerURLClassLoader对象想要被GC回收，需要满足三个条件：
+ *     1、没有引用指向InnerURLClassLoader加载的Class
+ *     2、没有引用指向Class关联的对象
+ *     3、没有引用指向InnerURLClassLoader对象
+ * 结论推测：
+ *     1、通过JarLoadUtils的逻辑可以确定，卸载Jar包之后，理论上应该没有引用指向InnerURLClassLoader对象
+ *     2、通过jvisualvm工具监控以及Spring的ApplicationContext容器获取指定beanName都可以确定，Class关联的Bean对象确实被注销了，并且被GC回收了
+ *        【
+ *          观察jvisualvm的抽样器可检测堆的实时结果
+ *          导出dump，然后通过jhat分析，通过OQL语句查询
+ *          通过jmap -histo命令，查看实例数
+ *        】
+ *     3、通过jvisualvm工具和jhat分析，虽然JarLoadUtils中缓存InnerURLClassLoader对象的map删除了，但还是有很多引用指向它
+ *        经过对比发现，这些引用在创建普通对象时是没有的，怀疑是Spring容器给加上的，但是在注销的时候又没有同步删除
+ * 解决方案：
+ *     不再使用Spring容器来管理外部加载的class了，直接使用一个ConcurrentHashMap来存储相关对象，经过测试，确实可行
  */
 public class JarLoadUtils {
 
@@ -152,11 +223,9 @@ public class JarLoadUtils {
         }
     }
 
-    private final class InnerURLClassLoader extends URLClassLoader {
+    public static final class InnerURLClassLoader extends URLClassLoader {
 
         private final Logger logger = LogManager.getLogger(this.getClass());
-
-        private JarURLConnection jarURLConnection = null;
 
         private InnerURLClassLoader() {
             super(new URL[]{}, Thread.currentThread().getContextClassLoader());
@@ -168,31 +237,16 @@ public class JarLoadUtils {
          * @param url
          */
         private void loadJar(URL url) {
-            try {
-                //打开文件url连接
-                URLConnection urlConnection = url.openConnection();
-                if (urlConnection instanceof JarURLConnection) {
-                    urlConnection.setUseCaches(true);
-                    ((JarURLConnection) urlConnection).getManifest();
-                    this.jarURLConnection = (JarURLConnection) urlConnection;
-                }
-                //将指定的URL添加到URL列表中，以便搜索类和资源。
-                this.addURL(url);
-            } catch (Exception e) {
-                LoggerUtils.error(logger, e);
-            }
+            //将指定的URL添加到URL列表中，以便搜索类和资源。
+            this.addURL(url);
         }
 
         /**
          * 卸载Jar包
          */
         private void unloadJar() {
-            if (this.jarURLConnection == null) {
-                return;
-            }
             try {
-                this.jarURLConnection.getJarFile().close();
-                this.jarURLConnection = null;
+                this.close();
             } catch (Exception e) {
                 LoggerUtils.error(logger, e);
             }
