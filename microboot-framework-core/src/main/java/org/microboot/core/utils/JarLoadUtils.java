@@ -98,6 +98,11 @@ import java.util.concurrent.ConcurrentHashMap;
  *        经过对比发现，这些引用在创建普通对象时是没有的，怀疑是Spring容器给加上的，但是在注销的时候又没有同步删除
  * 解决方案：
  *     不再使用Spring容器来管理外部加载的class了，直接使用一个ConcurrentHashMap来存储相关对象，经过测试，确实可行
+ * 总结：
+ *     使用自定义ClassLoader加载第三方jar以及class
+ *     然后将class交给Spring去创建Bean以及管理Bean生命周期过程中
+ *     会给ClassLoader增加一些额外的引用
+ *     这些引用在Bean销毁时并没有被收回，导致ClassLoader的对象无法被GC回收
  */
 public class JarLoadUtils {
 
