@@ -228,7 +228,7 @@ public class JarLoadUtils {
         }
     }
 
-    public static final class InnerURLClassLoader extends URLClassLoader {
+    private final class InnerURLClassLoader extends URLClassLoader {
 
         private final Logger logger = LogManager.getLogger(this.getClass());
 
