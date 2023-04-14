@@ -8,9 +8,11 @@ import net.spy.memcached.spring.MemcachedClientFactoryBean;
 import org.apache.activemq.command.ActiveMQTopic;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.microboot.cache.bean.CacheMQTopicListener;
-import org.microboot.cache.bean.CacheMQTopicProvider;
+import org.microboot.cache.bean.ActiveMQListener;
+import org.microboot.cache.bean.ActiveMQProvider;
 import org.microboot.cache.constant.CacheConstant;
+import org.microboot.cache.func.MQListenerFunc;
+import org.microboot.cache.func.MQProviderFunc;
 import org.microboot.cache.impl.AbstractLocalCache;
 import org.microboot.cache.impl.CacheImpl;
 import org.microboot.cache.impl.CacheManagerImpl;
@@ -55,7 +57,7 @@ public class CacheConfig {
 
     /******************************************消息队列，利用广播机制删除所有微服务local级别缓存中指定key的缓存***********************************************/
     /**
-     * ActiveMQTopic初始化
+     * ActiveMQTopic 初始化
      *
      * @param environment
      * @return
@@ -72,42 +74,27 @@ public class CacheConfig {
     }
 
     /**
-     * CacheMQTopicListener 初始化
+     * ActiveMQListener 初始化
      *
-     * @param cacheImpl
-     * @param localCacheImpl
      * @return
      */
-    @Bean(name = "org.microboot.cache.bean.CacheMQTopicListener")
+    @Bean(name = "org.microboot.cache.func.MQListenerFunc")
+    @ConditionalOnMissingBean(MQListenerFunc.class)
     @ConditionalOnProperty(name = {"cache.activemq.using", "spring.jms.pub-sub-domain"}, havingValue = "true")
-    public CacheMQTopicListener initCacheMQTopicListener(@Autowired(required = true) @Qualifier(value = "microboot.cache") CacheImpl cacheImpl,
-                                                         @Autowired(required = false) @Qualifier(value = "microboot.local.cache") CacheImpl localCacheImpl) {
-        List<Cache> caches = cacheImpl.getCaches();
-        Set<AbstractLocalCache> localCaches = Sets.newHashSet();
-        if (CollectionUtils.isNotEmpty(caches)) {
-            for (Cache cache : caches) {
-                if (cache instanceof AbstractLocalCache) {
-                    localCaches.add((AbstractLocalCache) cache);
-                }
-            }
-        }
-        if (localCacheImpl != null && CollectionUtils.isNotEmpty(localCacheImpl.getCaches())) {
-            for (Cache cache : localCacheImpl.getCaches()) {
-                localCaches.add((AbstractLocalCache) cache);
-            }
-        }
-        return new CacheMQTopicListener(localCaches);
+    public ActiveMQListener initActiveMQListener() {
+        return new ActiveMQListener();
     }
 
     /**
-     * CacheMQTopicProvider 初始化
+     * ActiveMQProvider 初始化
      *
      * @return
      */
-    @Bean(name = "org.microboot.cache.bean.CacheMQTopicProvider")
+    @Bean(name = "org.microboot.cache.func.MQProviderFunc")
+    @ConditionalOnMissingBean(MQProviderFunc.class)
     @ConditionalOnProperty(name = {"cache.activemq.using", "spring.jms.pub-sub-domain"}, havingValue = "true")
-    public CacheMQTopicProvider initCacheMQTopicProvider() {
-        return new CacheMQTopicProvider();
+    public ActiveMQProvider initActiveMQProvider() {
+        return new ActiveMQProvider();
     }
 
     /******************************************** 缓存 **********************************************/
@@ -165,6 +152,33 @@ public class CacheConfig {
         String cacheName = StringUtils.isBlank(environment.getProperty("cache.central.name"))
                 ? CacheConstant.DEFAULT_CACHE_CENTRAL_NAME : environment.getProperty("cache.central.name");
         return getCache(allowNullValues, cacheName, cacheList);
+    }
+
+    /**
+     * Set<AbstractLocalCache> 初始化 -> 集中并去重将所有本地缓存，用于同步清除
+     *
+     * @param cacheImpl
+     * @param localCacheImpl
+     * @return
+     */
+    @Bean(name = "localCaches")
+    public Set<AbstractLocalCache> initLocalCaches(@Autowired(required = true) @Qualifier(value = "microboot.cache") CacheImpl cacheImpl,
+                                                   @Autowired(required = false) @Qualifier(value = "microboot.local.cache") CacheImpl localCacheImpl) {
+        List<Cache> caches = cacheImpl.getCaches();
+        Set<AbstractLocalCache> localCaches = Sets.newHashSet();
+        if (CollectionUtils.isNotEmpty(caches)) {
+            for (Cache cache : caches) {
+                if (cache instanceof AbstractLocalCache) {
+                    localCaches.add((AbstractLocalCache) cache);
+                }
+            }
+        }
+        if (localCacheImpl != null && CollectionUtils.isNotEmpty(localCacheImpl.getCaches())) {
+            for (Cache cache : localCacheImpl.getCaches()) {
+                localCaches.add((AbstractLocalCache) cache);
+            }
+        }
+        return localCaches;
     }
 
     /**
