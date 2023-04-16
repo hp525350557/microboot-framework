@@ -30,6 +30,15 @@ import java.util.Map;
  * SpringBoot中监听器排序序号越小，在监听器列表中越靠前
  * SpringBoot中各个事件都有对应的监听器，且大部分监听器的排序序号都以Ordered.HIGHEST_PRECEDENCE为基础进行计算
  * 当我们的监听器需要在对应的事件位置执行时，最好排在相同事件对应的SpringBoot监听器之后执行
+ *
+ * supportsSourceType方法于判断事件发布的来源，当它返回true&supportsEventType同样返回true时，才会调用该监听内的onApplicationEvent方法
+ * 通常默认会直接返回true，Spring官方监听器源码默认也是返回true，也就是说事件源的类型通常对于判断匹配的监听器没有意义
+ * 举例：
+ * @Override
+ * public boolean supportsSourceType(Class<?> sourceType) {
+ *     return sourceType == UserService.class;
+ * }
+ * 表示只有在UserService内发布的指定事件时，这个监听器才会生效
  */
 public class MicrobootLoggingApplicationListener implements GenericApplicationListener {
 
@@ -40,18 +49,16 @@ public class MicrobootLoggingApplicationListener implements GenericApplicationLi
             ApplicationEnvironmentPreparedEvent.class
     };
 
-    private static final Class<?>[] SOURCE_TYPES = {
-            SpringApplication.class, ApplicationContext.class
-    };
-
+    /**
+     * 判断发布的事件类型
+     * 该方法返回true&supportsSourceType同样返回true时，才会调用该监听内的onApplicationEvent方法
+     *
+     * @param eventType
+     * @return
+     */
     @Override
     public boolean supportsEventType(ResolvableType eventType) {
         return isAssignableFrom(eventType.getRawClass(), EVENT_TYPES);
-    }
-
-    @Override
-    public boolean supportsSourceType(Class<?> sourceType) {
-        return isAssignableFrom(sourceType, SOURCE_TYPES);
     }
 
     @SuppressWarnings({"unchecked"})
