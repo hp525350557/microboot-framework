@@ -117,13 +117,19 @@ import java.util.concurrent.Callable;
  *     }
  * }
  *
- * TODO 老版本的lockMap使用的是普通Object做为锁对象，
+ * 老版本的lockMap使用的是普通Object做为锁对象，
  *      测试发现仍然会有线程安全性问题
  *      新版本使用ReentrantLock代替synchronized(Object对象)
  *
- * TODO 老版本是直接实现Cache接口
+ * 老版本是直接实现Cache接口
  *      新版本参考了RedisCache后，改为继承AbstractValueAdaptingCache
  *      并对一系列列方法做了进一步的优化和调整
+ *
+ * CacheImpl和AbstractCache没有直接关系
+ * CacheImpl是microboot的缓存入口，配置文件中的缓存组合就保存在CacheImpl中
+ * AbstractCache是内置各个缓存组件的父类，它规范和统一了microboot各缓存组件的实现方法
+ * CacheImpl中调用的都是AbstractCache各子类实现，即：各缓存组件
+ * 所以CacheImpl和AbstractCache应该算是组合关系【PS：AbstractLocalCache也是缓存组件的父类，特指本地缓存】
  */
 public class CacheImpl extends AbstractValueAdaptingCache {
 
