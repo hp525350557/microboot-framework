@@ -200,6 +200,11 @@ public class DaoConfig {
              3、microboot框架改变了freemarker模板的加载位置（兼容打jar包后读取模板），查看TemplateResolver这个类
                 所以此时autoImport的value是freemarker模板文件加载到内存后的key值，如下：
                 autoImport.put("macro", "macro"); value值的macro是模板加载时的templateKey
+             4、autoImport.put("key", "value")
+                    key：表示指向value这个模板
+                    value：表示模板名【默认是用模板的相对路径做templateKey】，TemplateResolver将模板名本身作为templateKey
+                如果加载的macro.sql改名叫XXX.sql，那么basedao-*.yml文件中的datasource.macro就应该配置为XXX
+                那么这里的autoImport的key还是macro，value就是XXX
 		 */
         String macro = dataSourceFactory.getMacro();
         if (StringUtils.isNotBlank(macro)) {
