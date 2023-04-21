@@ -15,6 +15,7 @@ import org.microboot.data.func.XADataSourceFactoryFunc;
 import org.microboot.data.processor.DataSourcePostProcessor;
 import org.microboot.data.resolver.TemplateResolver;
 import org.microboot.data.runner.StartRunner;
+import org.springframework.boot.autoconfigure.freemarker.FreeMarkerProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
@@ -176,22 +177,29 @@ public class DaoConfig {
      * @throws Exception
      */
     @Bean(name = Constant.FREEMARKER_CONFIGURATION)
-    public freemarker.template.Configuration initConfiguration(DataSourceFactory dataSourceFactory) throws Exception {
+    public freemarker.template.Configuration initConfiguration(DataSourceFactory dataSourceFactory, FreeMarkerProperties properties) throws Exception {
         freemarker.template.Configuration configuration = new freemarker.template.Configuration(freemarker.template.Configuration.VERSION_2_3_24);
-        configuration.setCacheStorage(new MruCacheStorage(0, Integer.MAX_VALUE));
-        configuration.setDefaultEncoding(StandardCharsets.UTF_8.name());
+
+        //本来想完全交给SpringBoot去管理，直接在配置文件中写配置信息即可
+        //但是测试发现beansWrapperFn会报错，可能是因为不是在构建Bean的时候设置的
+        //所以参考SpringBoot的构建方式，手动创建，现在settings属性还是在配置文件中设置
+        configuration.setDefaultEncoding(properties.getCharsetName());
+        Properties settings = new Properties();
+        settings.putAll(properties.getSettings());
+        configuration.setSettings(settings);
+        //用于整合Java工具类
         Map<String, Object> variables = Maps.newHashMap();
         variables.put("beansWrapperFn", new BeansWrapperBuilder(freemarker.template.Configuration.VERSION_2_3_24).build());
         configuration.setSharedVariables(variables);
 		/*
-		 1、autoImport是用key-value的方式匹配需要自动加载的模板，即：使用一个变量指向一个模板
-		 2、传统方式：
-		        freemarker加载模板位置是在classpath:/templates/，查看FreeMarkerProperties这个类
-		        autoImport的value是freemarker模板文件的相对路径，比如：
-		            classpath:/templates/sql/macro.sql -> autoImport.put("macro", "sql/macro.sql");
-		 3、microboot框架改变了freemarker模板的加载位置（兼容打jar包后读取模板），查看TemplateResolver这个类
-            所以此时autoImport的value是freemarker模板文件加载到内存后的key值，如下：
-            autoImport.put("macro", "macro"); value值的macro是模板加载时的templateKey
+             1、autoImport是用key-value的方式匹配需要自动加载的模板，即：使用一个变量指向一个模板
+             2、传统方式：
+                    freemarker加载模板位置是在classpath:/templates/，查看FreeMarkerProperties这个类
+                    autoImport的value是freemarker模板文件的相对路径，比如：
+                        classpath:/templates/sql/macro.sql -> autoImport.put("macro", "sql/macro.sql");
+             3、microboot框架改变了freemarker模板的加载位置（兼容打jar包后读取模板），查看TemplateResolver这个类
+                所以此时autoImport的value是freemarker模板文件加载到内存后的key值，如下：
+                autoImport.put("macro", "macro"); value值的macro是模板加载时的templateKey
 		 */
         String macro = dataSourceFactory.getMacro();
         if (StringUtils.isNotBlank(macro)) {
@@ -199,19 +207,6 @@ public class DaoConfig {
             autoImport.put("macro", macro);
             configuration.setAutoImports(autoImport);
         }
-        Properties freemarkerSettings = new Properties();
-        freemarkerSettings.setProperty("template_update_delay", Constant.CODE_5);
-        freemarkerSettings.setProperty("default_encoding", StandardCharsets.UTF_8.name());
-        freemarkerSettings.setProperty("output_encoding", StandardCharsets.UTF_8.name());
-        freemarkerSettings.setProperty("url_escaping_charset", StandardCharsets.UTF_8.name());
-        freemarkerSettings.setProperty("datetime_format", "yyyy-MM-dd HH:mm:ss");
-        freemarkerSettings.setProperty("date_format", "yyyy-MM-dd");
-        freemarkerSettings.setProperty("time_format", "HH:mm:ss");
-        freemarkerSettings.setProperty("number_format", "#.##");
-        freemarkerSettings.setProperty("tag_syntax", "auto_detect");
-        freemarkerSettings.setProperty("boolean_format", "true,false");
-        freemarkerSettings.setProperty("whitespace_stripping", "true");
-        configuration.setSettings(freemarkerSettings);
         return configuration;
     }
 

@@ -22,14 +22,13 @@ public class ViewConfig {
     @Bean(name = "org.microboot.view.bean.FreeMarkerConfigurerExtender")
     public FreeMarkerConfigurerExtender initFreeMarkerConfigurerExtender(FreeMarkerProperties properties) {
         FreeMarkerConfigurerExtender configurer = new FreeMarkerConfigurerExtender();
-        //本来想交给SpringBoot去管理，直接在配置文件中写配置信息即可
+        //本来想完全交给SpringBoot去管理，直接在配置文件中写配置信息即可
         //但是测试发现beansWrapperFn会报错，可能是因为不是在构建Bean的时候设置的
         //所以参考SpringBoot的构建方式，手动创建，现在settings属性还是在配置文件中设置
         configurer.setTemplateLoaderPaths(properties.getTemplateLoaderPath());
         configurer.setPreferFileSystemAccess(properties.isPreferFileSystemAccess());
         configurer.setDefaultEncoding(properties.getCharsetName());
         Properties settings = new Properties();
-        settings.put("recognize_standard_file_extensions", "true");
         settings.putAll(properties.getSettings());
         configurer.setFreemarkerSettings(settings);
         //用于整合Java工具类
