@@ -25,11 +25,11 @@ import java.util.Map;
  * 在BaseDao的继承关系中，加入了TransmittableThreadLocal作为父类
  * 让BaseDao本身也是一个ThreadLocal
  * 每次执行execute方法时，将写库的连接记录下来，并通过TransmittableThreadLocal进行传播
- * 每次执行query方法时，先查看TransmittableThreadLocal中有没有数据库连接，如果就表示先执行了增删改操作
- * 那么查询时直接沿用写库的连接去进行查询数据，如果没有才去获取从库的连接进行读数据
- * 为了避免ThreadLocal可能出现的内存泄露，同时也因为Spring使用了线程池，线程总是复用
- * 所以又自定义了一个ClearThreadLocal注解和相应的Spring切面
- * 在切面中，将每次存在本次线程中的写库连接remove掉
+ * 每次执行query方法时，先查看TransmittableThreadLocal中有没有数据库连接
+ * 1、如果有就表示先执行了增删改操作，那么查询时直接使用写库的连接去进行查询数据
+ * 2、如果没有就表示读取数据之前没有对数据库进行增删改操作，那么就获取从库的连接进行读数据
+ * 由于Spring默认使用了线程池，导致线程总是复用，为了避免ThreadLocal可能出现的内存泄露
+ * 因此自定义了一个ClearThreadLocal注解和相应的Spring切面，将每次存在当前线程中的写库连接remove掉
  * 最后在Service类或方法上加上这个注解，即可
  *
  * 版本一的问题：
@@ -44,7 +44,7 @@ import java.util.Map;
  * 版本二的问题：
  * 虽然解决了嵌套调用的问题，但是如果遇到多线程，又会有问题了
  * 比如：A() -> thread(() -> b()).start()
- * 如果，此时如果A()方法先执行完，此时A()可能不会去执行TransmittableThreadLocal的remove方法，导致不可遇见的问题
+ * 如果此时A()方法先执行完，那么A()可能不会去执行TransmittableThreadLocal的remove方法，导致不可遇见的问题
  *
  * 现版本解决方案：
  * 由于上面的方案有这么多的问题，于是决定不再使用TransmittableThreadLocal来解决主从延时问题
