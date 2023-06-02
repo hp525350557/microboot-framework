@@ -47,10 +47,9 @@ import java.util.Map;
  * 如果此时A()方法先执行完，那么A()可能不会去执行TransmittableThreadLocal的remove方法，导致不可遇见的问题
  *
  * 现版本解决方案：
- * 由于上面的方案有这么多的问题，于是决定不再使用TransmittableThreadLocal来解决主从延时问题
- * 而是像Slaves库，Others库一样，再定义一个AbstractBaseDaoWithMaster类
- * 让原本的query方法默认获取从库连接，而AbstractBaseDaoWithMaster类中的query方法默认使用主库连接
- * 交由上层业务开发去决定
+ * 由于上面的方案有这么多的问题，于是决定不再使用TransmittableThreadLocal来解决主从延时问题，而是定义一个AbstractBaseDaoWithMaster类
+ * 让AbstractBaseDaoWithMaster中的query方法默认使用主库连接，而BaseDao中的query方法默认使用从库连接
+ * 交给上层业务开发人员去决定，什么时候查从库，什么时候查主库
  */
 public abstract class AbstractBaseDaoWithMaster extends AbstractBaseDaoWithSlaves {
 
