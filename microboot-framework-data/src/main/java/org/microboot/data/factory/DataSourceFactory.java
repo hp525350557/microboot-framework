@@ -31,6 +31,9 @@ public class DataSourceFactory {
     //其他数据库连接池信息
     private List<Map<String, Object>> others;
 
+    //退避检查开关配置，默认关闭
+    private boolean enableBackoff;
+
     //退避检查定时任务：首次执行的延迟时间
     private long backoffTimeDelay;
 
