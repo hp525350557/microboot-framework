@@ -387,10 +387,14 @@ public abstract class AbstractBaseDao {
         if (size == 0) {
             return null;
         }
-        //随机下标
-        //ThreadLocalRandom比Random性能更高
-        //java7在所有情形下都更推荐使用ThreadLocalRandom，它向下兼容已有的代码且运营成本更低
-        int index = ThreadLocalRandom.current().nextInt(size);
+        //默认index是0，如果size不大于1，就不用去生成随机数赋值给index了
+        int index = 0;
+        //如果size > 1，则随机下标赋值给index
+        if (size > 1) {
+            //ThreadLocalRandom比Random性能更高
+            //java7在所有情形下都更推荐使用ThreadLocalRandom，它向下兼容已有的代码且运营成本更低
+            index = ThreadLocalRandom.current().nextInt(size);
+        }
         //所有连接名（new String[0]用来指定数组类型，toArray方法的参数是泛型）
         String[] names = namedParameterJdbcTemplateMap.keySet().toArray(new String[0]);
         //获取names数组长度，此时names是局部变量，names中的值是copy进来的，因此不会随着namedParameterJdbcTemplateMap中元素变化而变化
