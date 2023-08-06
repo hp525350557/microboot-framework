@@ -59,9 +59,9 @@ public class DataSourcePostProcessor implements InitializingBean {
         //默认事务管理器
         defaultTransactionManager(dataSource);
 
-        Map<String, DataSource> slavesDataSourceMap = (Map<String, DataSource>) ApplicationContextHolder.getBean(Constant.SLAVES_DATA_SOURCE);
+        DataSource slavesDataSource = ApplicationContextHolder.getBean(Constant.SLAVES_DATA_SOURCE, DataSource.class);
         //动态事务管理器
-        this.dynamicTransactionManager(slavesDataSourceMap);
+        this.dynamicTransactionManager(slavesDataSource);
 
         Map<String, DataSource> othersDataSourceMap = (Map<String, DataSource>) ApplicationContextHolder.getBean(Constant.OTHERS_DATA_SOURCE);
         //动态事务管理器
@@ -84,6 +84,25 @@ public class DataSourcePostProcessor implements InitializingBean {
         beanDefinitionBuilder.addPropertyValue("nestedTransactionAllowed", true);
         //注册bean
         defaultListableBeanFactory.registerBeanDefinition(transactionManagerPrefix, beanDefinitionBuilder.getRawBeanDefinition());
+    }
+
+    /**
+     * 动态事务管理器
+     *
+     * @param dataSource
+     */
+    private void dynamicTransactionManager(DataSource dataSource) {
+        if (dataSource == null) {
+            return;
+        }
+        if (dataSource instanceof DruidDataSource) {
+            //通过BeanDefinitionBuilder创建bean定义
+            BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition(DataSourceTransactionManager.class);
+            //设置bean属性
+            beanDefinitionBuilder.addPropertyValue("dataSource", dataSource);
+            //注册bean
+            defaultListableBeanFactory.registerBeanDefinition(transactionManagerPrefix + '&' + ((DruidDataSource) dataSource).getName(), beanDefinitionBuilder.getRawBeanDefinition());
+        }
     }
 
     /**
