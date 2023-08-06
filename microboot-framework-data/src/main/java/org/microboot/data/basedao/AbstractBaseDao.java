@@ -311,7 +311,6 @@ public abstract class AbstractBaseDao {
      * @throws Exception
      */
     protected int execute(String templateName, MapSqlParameterSource parameterSource, NamedParameterJdbcTemplate namedParameterJdbcTemplate) throws Exception {
-        Assert.notNull(parameterSource, "MapSqlParameterSource must not be null");
         String sql = ApplicationContextHolder.getBean(TemplateResolver.class).processTemplate(templateName, parameterSource.getValues());
         return this.executeBySql(sql, parameterSource, namedParameterJdbcTemplate);
     }
@@ -324,6 +323,7 @@ public abstract class AbstractBaseDao {
      * @throws Exception
      */
     protected int executeBySql(String sql, MapSqlParameterSource parameterSource, NamedParameterJdbcTemplate namedParameterJdbcTemplate) throws Exception {
+        Assert.notNull(parameterSource, "parameterSource must not be null");
         logger.info(sql + " -> " + ConvertUtils.object2Json(parameterSource));
         return namedParameterJdbcTemplate.update(sql, parameterSource);
     }
