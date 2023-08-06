@@ -26,28 +26,10 @@ public class DataSourceFactory {
     private Map<String, Object> master;
 
     //读数据库连接池信息
-    private List<Map<String, Object>> slaves;
+    private Map<String, Object> slaves;
 
     //其他数据库连接池信息
     private List<Map<String, Object>> others;
-
-    //退避检查开关配置，默认关闭
-    private boolean enableBackoff;
-
-    //退避检查定时任务：首次执行的延迟时间
-    private long backoffTimeDelay;
-
-    //退避检查定时任务：上一次执行终止和下一次执行开始之间的延迟
-    private long backoffTimePeriod;
-
-    //最小退避时间
-    private long backoffTimeLimit;
-
-    //最大退避时间
-    private long backoffTimeLimitMax;
-
-    //退避时间递增步长
-    private int backoffTimeLimitStep;
 
     //指定macro文件
     private String macro;

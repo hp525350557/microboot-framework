@@ -6,9 +6,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.microboot.core.bean.ApplicationContextHolder;
+import org.microboot.core.constant.Constant;
 import org.microboot.core.entity.Page;
 import org.microboot.core.utils.ConvertUtils;
-import org.microboot.data.container.DataContainer;
 import org.microboot.data.resolver.TemplateResolver;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -838,7 +838,7 @@ public abstract class AbstractBaseDaoWithOthers extends AbstractBaseDao {
         if (StringUtils.isBlank(dataBaseName)) {
             throw new IllegalArgumentException("dataBaseName must not be null");
         }
-        Map<String, NamedParameterJdbcTemplate> namedParameterJdbcTemplateMap = DataContainer.othersMap;
+        Map<String, NamedParameterJdbcTemplate> namedParameterJdbcTemplateMap = (Map<String, NamedParameterJdbcTemplate>) ApplicationContextHolder.getBean(Constant.OTHERS_JDBC_TEMPLATE);
         NamedParameterJdbcTemplate namedParameterJdbcTemplate = namedParameterJdbcTemplateMap.getOrDefault(dataBaseName, null);
         if (namedParameterJdbcTemplate == null) {
             throw new SQLException("no available connections were found");

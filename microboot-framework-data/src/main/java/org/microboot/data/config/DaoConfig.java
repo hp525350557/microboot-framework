@@ -2,9 +2,9 @@ package org.microboot.data.config;
 
 import com.alibaba.druid.pool.DruidDataSource;
 import com.google.common.collect.Maps;
-import freemarker.cache.MruCacheStorage;
 import freemarker.ext.beans.BeansWrapperBuilder;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.util.Asserts;
 import org.microboot.core.bean.ApplicationContextHolder;
@@ -14,7 +14,6 @@ import org.microboot.data.factory.DataSourceFactory;
 import org.microboot.data.func.XADataSourceFactoryFunc;
 import org.microboot.data.processor.DataSourcePostProcessor;
 import org.microboot.data.resolver.TemplateResolver;
-import org.microboot.data.runner.StartRunner;
 import org.springframework.boot.autoconfigure.freemarker.FreeMarkerProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,13 +22,19 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import javax.sql.DataSource;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
 /**
  * @author 胡鹏
+ * 在老版本中，microboot-framework-data内置了从库集群的负载均衡，从库节点退避以及回归等功能
+ * 但作者在不断学习过程中，接触到了LVS+keepalived的方案
+ * · LVS可以实现IP层面的负载均衡
+ * · keepalived可以实现LVS的高可用，还能对LVS负载的real server节点进行健康检查，并让宕机的节点退避
+ * 这些功能完全覆盖了microboot-framework-data内置的从库逻辑
+ * 因此新版版中，将从库的负载均衡，退避等相关功能全部去掉了
+ * 这部分功能在以后的架构中交由LVS+keepalived或其他类似功能去实现
  */
 @Configuration
 @DependsOn(Constant.APPLICATION_CONTEXT_HOLDER)
@@ -79,35 +84,45 @@ public class DaoConfig {
     }
 
     /**
-     * 初始化Map<String, DataSource>（从库）
+     * 初始化DataSource（从库）
      *
      * @param dataSourceFactory
      * @return
      */
     @Bean(value = Constant.SLAVES_DATA_SOURCE)
-    public Map<String, DataSource> initSlavesDataSource(DataSourceFactory dataSourceFactory) {
+    public DataSource initSlavesDataSource(DataSourceFactory dataSourceFactory) {
         Map<String, DataSource> dataSourceMap = Maps.newHashMap();
-        List<Map<String, Object>> slaves = dataSourceFactory.getSlaves();
-        if (CollectionUtils.isEmpty(slaves)) {
+        Map<String, Object> slaves = dataSourceFactory.getSlaves();
+        DataSource dataSource;
+        if (MapUtils.isEmpty(slaves)) {
             //如果未定义从库，则主从用同一个数据源
-            DataSource dataSource = ApplicationContextHolder.getBean(Constant.MASTER_DATA_SOURCE, DataSource.class);
-            putDataSourceMap(dataSourceMap, dataSource);
+            dataSource = ApplicationContextHolder.getBean(Constant.MASTER_DATA_SOURCE, DataSource.class);
         } else {
             //如果定义了从库，则主从分离，主数据库用来写，从数据库用来读
-            for (Map<String, Object> slave : slaves) {
-                DataSource dataSource = dataSourceFactory.createDataSource(slave);
-                if (dataSourceFactory.isEnableXA()) {
-                    Asserts.check(
-                            ApplicationContextHolder.getApplicationContext().containsLocalBean(XADataSourceFactoryFunc.class.getName()),
-                            XADataSourceFactoryFunc.class.getName().concat(" is missing")
-                    );
-                    dataSource = ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class).rebuildDataSource(dataSource);
-                    Asserts.check(dataSource != null, "dataSource is null");
-                }
-                putDataSourceMap(dataSourceMap, dataSource);
+            dataSource = dataSourceFactory.createDataSource(slaves);
+            //如果开启了XA模式，则对dataSource进行XA处理
+            if (dataSourceFactory.isEnableXA()) {
+                Asserts.check(
+                        ApplicationContextHolder.getApplicationContext().containsLocalBean(XADataSourceFactoryFunc.class.getName()),
+                        XADataSourceFactoryFunc.class.getName().concat(" is missing")
+                );
+                dataSource = ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class)
+                        .rebuildDataSource(dataSource);
+                Asserts.check(dataSource != null, "dataSource is null");
             }
         }
-        return dataSourceMap;
+        return dataSource;
+    }
+
+    /**
+     * 初始化NamedParameterJdbcTemplate（从库）
+     *
+     * @return
+     */
+    @Bean(name = Constant.SLAVES_JDBC_TEMPLATE)
+    public NamedParameterJdbcTemplate initSlavesJdbcTemplate() {
+        DataSource dataSource = ApplicationContextHolder.getBean(Constant.SLAVES_DATA_SOURCE, DataSource.class);
+        return new NamedParameterJdbcTemplate(dataSource);
     }
 
     /**
@@ -127,18 +142,38 @@ public class DaoConfig {
             //如果定义了其他库，则构建其他库连接池
             for (Map<String, Object> other : others) {
                 DataSource dataSource = dataSourceFactory.createDataSource(other);
+                //如果开启了XA模式，则对dataSource进行XA处理
                 if (dataSourceFactory.isEnableXA()) {
                     Asserts.check(
                             ApplicationContextHolder.getApplicationContext().containsLocalBean(XADataSourceFactoryFunc.class.getName()),
                             XADataSourceFactoryFunc.class.getName().concat(" is missing")
                     );
-                    dataSource = ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class).rebuildDataSource(dataSource);
+                    dataSource = ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class)
+                            .rebuildDataSource(dataSource);
                     Asserts.check(dataSource != null, "dataSource is null");
+                    ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class)
+                            .putDataSourceMap(dataSourceMap, dataSource);
+                } else {
+                    dataSourceMap.put(((DruidDataSource) dataSource).getName(), dataSource);
                 }
-                putDataSourceMap(dataSourceMap, dataSource);
             }
         }
         return dataSourceMap;
+    }
+
+    /**
+     * 初始化Map<String, NamedParameterJdbcTemplate>（其他库）
+     *
+     * @return
+     */
+    @Bean(name = Constant.OTHERS_JDBC_TEMPLATE)
+    public Map<String, NamedParameterJdbcTemplate> initOthersJdbcTemplate() {
+        Map<String, DataSource> othersDataSourceMap = (Map<String, DataSource>) ApplicationContextHolder.getBean(Constant.OTHERS_DATA_SOURCE);
+        Map<String, NamedParameterJdbcTemplate> othersJdbcTemplateMap = Maps.newConcurrentMap();
+        for (String name : othersDataSourceMap.keySet()) {
+            othersJdbcTemplateMap.put(name, new NamedParameterJdbcTemplate(othersDataSourceMap.get(name)));
+        }
+        return othersJdbcTemplateMap;
     }
 
     /**
@@ -157,16 +192,6 @@ public class DaoConfig {
         boolean enableXA = dataSourceFactory.isEnableXA();
         if (enableXA) return null;
         return new DataSourcePostProcessor();
-    }
-
-    /**
-     * 初始化StartRunner
-     *
-     * @return
-     */
-    @Bean(name = "org.microboot.data.runner.StartRunner")
-    public StartRunner initStartRunner() {
-        return new StartRunner();
     }
 
     /**
@@ -233,26 +258,5 @@ public class DaoConfig {
     @Bean(name = "org.microboot.data.basedao.BaseDao")
     public BaseDao initBaseDao() {
         return new BaseDao();
-    }
-
-    /**
-     * 组装dataSourceMap
-     *
-     * @param dataSourceMap
-     * @param dataSource
-     */
-    private void putDataSourceMap(Map<String, DataSource> dataSourceMap, DataSource dataSource) {
-        if (dataSourceMap == null || dataSource == null) {
-            return;
-        }
-        if (dataSource instanceof DruidDataSource) {
-            dataSourceMap.put(((DruidDataSource) dataSource).getName(), dataSource);
-        } else {
-            Asserts.check(
-                    ApplicationContextHolder.getApplicationContext().containsLocalBean(XADataSourceFactoryFunc.class.getName()),
-                    XADataSourceFactoryFunc.class.getName().concat(" is missing")
-            );
-            ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class).putDataSourceMap(dataSourceMap, dataSource);
-        }
     }
 }

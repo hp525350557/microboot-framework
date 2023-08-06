@@ -30,7 +30,7 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @throws Exception
      */
     public List<Map<String, Object>> queryForList(String templateName, Map<String, ?> parameters) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.SLAVES_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
         return this.queryForList(templateName, parameters, namedParameterJdbcTemplate);
     }
 
@@ -73,7 +73,7 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @throws Exception
      */
     public <T> List<T> queryForList(String templateName, Map<String, ?> parameters, Class<T> clazz) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.SLAVES_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
         return this.queryForList(templateName, parameters, clazz, namedParameterJdbcTemplate);
     }
 
@@ -118,7 +118,7 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @throws Exception
      */
     public Map<String, Object> queryForMap(String templateName, Map<String, ?> parameters) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.SLAVES_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
         return this.queryForMap(templateName, parameters, namedParameterJdbcTemplate);
     }
 
@@ -161,7 +161,7 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @throws Exception
      */
     public <T> T queryForObject(String templateName, Map<String, ?> parameters, Class<T> clazz) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.SLAVES_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
         return this.queryForObject(templateName, parameters, clazz, namedParameterJdbcTemplate);
     }
 
@@ -208,7 +208,7 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @throws Exception
      */
     public <T> T query(String templateName, Map<String, ?> parameters, ResultSetExtractor<T> rse) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.SLAVES_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
         return this.query(templateName, parameters, namedParameterJdbcTemplate, rse);
     }
 
@@ -253,7 +253,7 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @throws Exception
      */
     public SqlRowSet queryForSqlRowSet(String templateName, Map<String, ?> parameters) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.SLAVES_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
         return this.queryForSqlRowSet(templateName, parameters, namedParameterJdbcTemplate);
     }
 
@@ -295,7 +295,7 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @throws Exception
      */
     public Page pagination(String paginationCount, String pagination, Map<String, ?> parameters) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.SLAVES_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
         return this.pagination(paginationCount, pagination, parameters, namedParameterJdbcTemplate);
     }
 
@@ -321,7 +321,7 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @throws Exception
      */
     public List<Map<String, Object>> queryForListBySql(String sql, Map<String, ?> parameters) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.SLAVES_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
         return this.queryForListBySql(sql, parameters, namedParameterJdbcTemplate);
     }
 
@@ -364,7 +364,7 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @throws Exception
      */
     public <T> List<T> queryForListBySql(String sql, Map<String, ?> parameters, Class<T> clazz) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.SLAVES_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
         return this.queryForListBySql(sql, parameters, clazz, namedParameterJdbcTemplate);
     }
 
@@ -409,7 +409,7 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @throws Exception
      */
     public Map<String, Object> queryForMapBySql(String sql, Map<String, ?> parameters) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.SLAVES_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
         return this.queryForMapBySql(sql, parameters, namedParameterJdbcTemplate);
     }
 
@@ -452,7 +452,7 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @throws Exception
      */
     public <T> T queryForObjectBySql(String sql, Map<String, ?> parameters, Class<T> clazz) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.SLAVES_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
         return this.queryForObjectBySql(sql, parameters, clazz, namedParameterJdbcTemplate);
     }
 
@@ -499,7 +499,7 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @throws Exception
      */
     public <T> T queryBySql(String sql, Map<String, ?> parameters, ResultSetExtractor<T> rse) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.SLAVES_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
         return this.queryBySql(sql, parameters, namedParameterJdbcTemplate, rse);
     }
 
@@ -544,7 +544,7 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @throws Exception
      */
     public SqlRowSet queryForSqlRowSetBySql(String sql, Map<String, ?> parameters) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.SLAVES_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
         return this.queryForSqlRowSetBySql(sql, parameters, namedParameterJdbcTemplate);
     }
 
@@ -586,7 +586,7 @@ public class BaseDao extends AbstractBaseDaoWithMaster {
      * @throws Exception
      */
     public Page paginationBySql(String paginationCountSql, String paginationSql, Map<String, ?> parameters) throws Exception {
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = this.getNamedParameterJdbcTemplateWithSlaves();
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ApplicationContextHolder.getBean(Constant.SLAVES_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class);
         return this.paginationBySql(paginationCountSql, paginationSql, parameters, namedParameterJdbcTemplate);
     }
 
