@@ -51,7 +51,7 @@ import java.util.Map;
  * 让AbstractBaseDaoWithMaster中的query方法默认使用主库连接，而BaseDao中的query方法默认使用从库连接
  * 交给上层业务开发人员去决定，什么时候查从库，什么时候查主库
  */
-public abstract class AbstractBaseDaoWithMaster extends AbstractBaseDaoWithOthers {
+public abstract class AbstractBaseDaoWithMaster extends AbstractBaseDaoWithSlaves {
 
     /**
      * @param templateName
