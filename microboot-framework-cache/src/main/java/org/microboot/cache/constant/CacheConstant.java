@@ -11,6 +11,7 @@ public class CacheConstant {
     public static final String DEFAULT_ACTIVEMQ_TOPIC = "microboot-topic";
     //cache
     public static final int DEFAULT_CACHE_EXPIRE = 30 * 60;
+    public static final boolean DEFAULT_CACHE_IS_DYNAMIC = false;
     public static final String DEFAULT_CACHE_NAME = Constant.CACHE_NAME;
     public static final String DEFAULT_CACHE_LOCAL_NAME = Constant.CACHE_LOCAL_NAME;
     public static final String DEFAULT_CACHE_CENTRAL_NAME = Constant.CACHE_CENTRAL_NAME;

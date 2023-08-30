@@ -1,11 +1,12 @@
 package org.microboot.cache.impl.redis;
 
 import org.apache.commons.lang3.StringUtils;
-import org.microboot.cache.utils.KeyUtils;
 import org.microboot.cache.impl.AbstractCache;
+import org.microboot.cache.utils.KeyUtils;
 import org.springframework.data.redis.core.RedisTemplate;
 
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -15,12 +16,15 @@ public class RedisImpl extends AbstractCache {
 
     //缓存时间
     private final int expire;
+    //缓存时间是否动态生成（true：缓存时间则是expire作为种子乘以一个随机数，false：缓存时间则是expire，默认false）
+    private final boolean isDynamic;
     //redisTemplate
     private final RedisTemplate<String, Object> redisTemplate;
 
-    public RedisImpl(String name, int expire, RedisTemplate<String, Object> redisTemplate) {
+    public RedisImpl(String name, int expire, boolean isDynamic, RedisTemplate<String, Object> redisTemplate) {
         this.name = name;
         this.expire = expire;
+        this.isDynamic = isDynamic;
         this.redisTemplate = redisTemplate;
     }
 
@@ -59,6 +63,7 @@ public class RedisImpl extends AbstractCache {
         if (StringUtils.isBlank(newKey)) {
             return;
         }
-        this.redisTemplate.opsForValue().set(newKey, value, expire, TimeUnit.SECONDS);
+        //ThreadLocalRandom.current()比new Random()获取随机数更高效
+        this.redisTemplate.opsForValue().set(newKey, value, isDynamic ? ThreadLocalRandom.current().nextInt(expire) : expire, TimeUnit.SECONDS);
     }
 }

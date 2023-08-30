@@ -362,9 +362,11 @@ public class CacheConfig {
     public MemcachedImpl initMemcachedImpl(MemcachedClientFactoryBean memcachedClientFactoryBean, Environment environment) throws Exception {
         int cacheExpire = StringUtils.isBlank(environment.getProperty("cache.memcached.expire"))
                 ? CacheConstant.DEFAULT_CACHE_EXPIRE : Integer.parseInt(environment.getProperty("cache.memcached.expire"));
+        boolean isDynamic = StringUtils.isBlank(environment.getProperty("cache.memcached.isDynamic"))
+                ? CacheConstant.DEFAULT_CACHE_IS_DYNAMIC : Boolean.parseBoolean(environment.getProperty("cache.memcached.isDynamic"));
         String cacheName = StringUtils.isBlank(environment.getProperty("cache.memcached.name"))
                 ? CacheConstant.DEFAULT_MEMCACHED_NAME : environment.getProperty("cache.memcached.name");
-        return new MemcachedImpl(cacheName, cacheExpire, (MemcachedClient) memcachedClientFactoryBean.getObject());
+        return new MemcachedImpl(cacheName, cacheExpire, isDynamic, (MemcachedClient) memcachedClientFactoryBean.getObject());
     }
 
     /************************************* Redis相关初始化 *****************************************/
@@ -400,9 +402,11 @@ public class CacheConfig {
     public RedisImpl initRedisCacheImpl(RedisTemplate<String, Object> redisTemplate, Environment environment) {
         int cacheExpire = StringUtils.isBlank(environment.getProperty("cache.redis.name"))
                 ? CacheConstant.DEFAULT_CACHE_EXPIRE : Integer.parseInt(environment.getProperty("cache.redis.expire"));
+        boolean isDynamic = StringUtils.isBlank(environment.getProperty("cache.redis.isDynamic"))
+                ? CacheConstant.DEFAULT_CACHE_IS_DYNAMIC : Boolean.parseBoolean(environment.getProperty("cache.redis.isDynamic"));
         String cacheName = StringUtils.isBlank(environment.getProperty("cache.redis.name"))
                 ? CacheConstant.DEFAULT_REDIS_NAME : environment.getProperty("cache.redis.name");
-        return new RedisImpl(cacheName, cacheExpire, redisTemplate);
+        return new RedisImpl(cacheName, cacheExpire, isDynamic, redisTemplate);
     }
 
     @SuppressWarnings("unchecked")
