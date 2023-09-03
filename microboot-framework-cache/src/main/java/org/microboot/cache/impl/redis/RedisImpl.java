@@ -64,6 +64,6 @@ public class RedisImpl extends AbstractCache {
             return;
         }
         //ThreadLocalRandom.current()比new Random()获取随机数更高效
-        this.redisTemplate.opsForValue().set(newKey, value, isDynamic ? ThreadLocalRandom.current().nextInt(expire) : expire, TimeUnit.SECONDS);
+        this.redisTemplate.opsForValue().set(newKey, value, isDynamic ? (expire <= 0 ? expire : ThreadLocalRandom.current().nextInt(1, expire)) : expire, TimeUnit.SECONDS);
     }
 }

@@ -61,6 +61,6 @@ public class MemcachedImpl extends AbstractCache {
             return;
         }
         //ThreadLocalRandom.current()比new Random()获取随机数更高效
-        this.memcachedClient.set(newKey, isDynamic ? ThreadLocalRandom.current().nextInt(expire) : expire, value);
+        this.memcachedClient.set(newKey, isDynamic ? (expire <= 0 ? expire : ThreadLocalRandom.current().nextInt(1, expire)) : expire, value);
     }
 }
