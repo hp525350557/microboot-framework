@@ -243,6 +243,13 @@ public class CacheImpl extends AbstractValueAdaptingCache {
             if (cacheValue != null) {
                 this.nullValueCachesPut(this.caches, key, cacheValue);
             }
+            /*
+                执行到此处，说明以下两点：
+                    1、缓存中没有业务数据
+                    2、业务方法返回值是null
+                那么无论是否开启缓存null值，都应该给客户端返回一个null
+                开启缓存null，只是在缓存中将null进行特殊处理后存储，避免缓存穿透
+             */
             return null;
         });
     }
