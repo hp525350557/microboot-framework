@@ -25,13 +25,26 @@ public class UUIDUtils {
         return UUID.randomUUID().toString();
     }
 
-    public static String uuidForNum(String... prefixs) {
+    public static String uuidForLeastNum(String... prefixArray) {
         String value = Long.toString(Math.abs(UUID.randomUUID().getLeastSignificantBits()));
-        if (ArrayUtils.isEmpty(prefixs)) {
+        if (ArrayUtils.isEmpty(prefixArray)) {
             return value;
         }
         StringBuilder sb = new StringBuilder();
-        for (String prefix : prefixs) {
+        for (String prefix : prefixArray) {
+            sb.append(prefix);
+        }
+        sb.append(value);
+        return sb.toString();
+    }
+
+    public static String uuidForMostNum(String... prefixArray) {
+        String value = Long.toString(Math.abs(UUID.randomUUID().getMostSignificantBits()));
+        if (ArrayUtils.isEmpty(prefixArray)) {
+            return value;
+        }
+        StringBuilder sb = new StringBuilder();
+        for (String prefix : prefixArray) {
             sb.append(prefix);
         }
         sb.append(value);
