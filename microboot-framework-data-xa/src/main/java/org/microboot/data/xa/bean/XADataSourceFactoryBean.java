@@ -31,19 +31,25 @@ public class XADataSourceFactoryBean implements XADataSourceFactoryFunc {
     }
 
     /**
-     * 获取分布式数据源的DruidDataSource
+     * 获取DruidDataSource
      *
      * @param dataSource
      * @return
      */
     @Override
     public DruidDataSource getDruidDataSource(DataSource dataSource) {
-        AtomikosDataSourceBean atomikosDataSourceBean = (AtomikosDataSourceBean) dataSource;
-        return (DruidXADataSource) atomikosDataSourceBean.getXaDataSource();
+        if (dataSource instanceof AtomikosDataSourceBean) {
+            AtomikosDataSourceBean atomikosDataSourceBean = (AtomikosDataSourceBean) dataSource;
+            return (DruidXADataSource) atomikosDataSourceBean.getXaDataSource();
+        }
+        if (dataSource instanceof DruidDataSource) {
+            return (DruidDataSource) dataSource;
+        }
+        return null;
     }
 
     /**
-     * 构建name->DruidDataSource的关系
+     * 存储DataSourceName -> DataSource的关系
      *
      * @param dataSourceMap
      * @param dataSource
