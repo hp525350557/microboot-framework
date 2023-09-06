@@ -1,6 +1,5 @@
 package org.microboot.data.xa.bean;
 
-import com.alibaba.druid.pool.DruidDataSource;
 import com.alibaba.druid.pool.xa.DruidXADataSource;
 import org.microboot.data.func.XADataSourceFactoryFunc;
 import org.springframework.boot.jta.atomikos.AtomikosDataSourceBean;
@@ -14,7 +13,7 @@ import java.util.Map;
 public class XADataSourceFactoryBean implements XADataSourceFactoryFunc {
 
     /**
-     * 创建AtomikosDataSourceBean
+     * 构建DataSource
      *
      * @param dataSource
      * @return
@@ -31,19 +30,16 @@ public class XADataSourceFactoryBean implements XADataSourceFactoryFunc {
     }
 
     /**
-     * 获取DruidDataSource
+     * 获取DataSourceName
      *
      * @param dataSource
      * @return
      */
     @Override
-    public DruidDataSource getDruidDataSource(DataSource dataSource) {
+    public String getDataSourceName(DataSource dataSource) {
         if (dataSource instanceof AtomikosDataSourceBean) {
             AtomikosDataSourceBean atomikosDataSourceBean = (AtomikosDataSourceBean) dataSource;
-            return (DruidXADataSource) atomikosDataSourceBean.getXaDataSource();
-        }
-        if (dataSource instanceof DruidDataSource) {
-            return (DruidDataSource) dataSource;
+            return ((DruidXADataSource) atomikosDataSourceBean.getXaDataSource()).getName();
         }
         return null;
     }
