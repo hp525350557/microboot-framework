@@ -1,5 +1,6 @@
 package org.microboot.data.xa.bean;
 
+import com.alibaba.druid.pool.DruidDataSource;
 import com.alibaba.druid.pool.xa.DruidXADataSource;
 import org.microboot.data.func.XADataSourceFactoryFunc;
 import org.springframework.boot.jta.atomikos.AtomikosDataSourceBean;
@@ -27,6 +28,18 @@ public class XADataSourceFactoryBean implements XADataSourceFactoryFunc {
             return atomikosDataSource;
         }
         return dataSource;
+    }
+
+    /**
+     * 获取分布式数据源的DruidDataSource
+     *
+     * @param dataSource
+     * @return
+     */
+    @Override
+    public DruidDataSource getDruidDataSource(DataSource dataSource) {
+        AtomikosDataSourceBean atomikosDataSourceBean = (AtomikosDataSourceBean) dataSource;
+        return (DruidXADataSource) atomikosDataSourceBean.getXaDataSource();
     }
 
     /**
