@@ -66,7 +66,8 @@ public class DaoConfig {
                     ApplicationContextHolder.getApplicationContext().containsLocalBean(XADataSourceFactoryFunc.class.getName()),
                     XADataSourceFactoryFunc.class.getName().concat(" is missing")
             );
-            dataSource = ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class).rebuildDataSource(dataSource);
+            dataSource = ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class)
+                    .rebuildDataSource(dataSource);
             Asserts.check(dataSource != null, "dataSource is null");
         }
         return dataSource;

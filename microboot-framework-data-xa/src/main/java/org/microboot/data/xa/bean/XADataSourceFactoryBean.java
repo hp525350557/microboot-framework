@@ -26,7 +26,7 @@ public class XADataSourceFactoryBean implements XADataSourceFactoryFunc {
             atomikosDataSource.setXaDataSource((DruidXADataSource) dataSource);
             return atomikosDataSource;
         }
-        return dataSource;
+        return null;
     }
 
     /**
