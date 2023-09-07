@@ -1,6 +1,7 @@
 package org.microboot.data.config;
 
 import com.alibaba.druid.pool.DruidDataSource;
+import com.alibaba.druid.pool.xa.DruidXADataSource;
 import com.google.common.collect.Maps;
 import freemarker.ext.beans.BeansWrapperBuilder;
 import org.apache.commons.collections.CollectionUtils;
@@ -61,7 +62,7 @@ public class DaoConfig {
     public DataSource initMasterDataSource(DataSourceFactory dataSourceFactory) {
         Map<String, Object> master = dataSourceFactory.getMaster();
         DataSource dataSource = dataSourceFactory.createDataSource(master);
-        if (dataSourceFactory.isEnableXA()) {
+        if (dataSource instanceof DruidXADataSource) {
             Asserts.check(
                     ApplicationContextHolder.getApplicationContext().containsLocalBean(XADataSourceFactoryFunc.class.getName()),
                     XADataSourceFactoryFunc.class.getName().concat(" is missing")
@@ -102,7 +103,7 @@ public class DaoConfig {
             //如果定义了从库，则主从分离，主数据库用来写，从数据库用来读
             dataSource = dataSourceFactory.createDataSource(slaves);
             //如果开启了XA模式，则对dataSource进行XA处理
-            if (dataSourceFactory.isEnableXA()) {
+            if (dataSource instanceof DruidXADataSource) {
                 Asserts.check(
                         ApplicationContextHolder.getApplicationContext().containsLocalBean(XADataSourceFactoryFunc.class.getName()),
                         XADataSourceFactoryFunc.class.getName().concat(" is missing")
@@ -136,28 +137,30 @@ public class DaoConfig {
     public Map<String, DataSource> initOthersDataSource(DataSourceFactory dataSourceFactory) {
         Map<String, DataSource> dataSourceMap = Maps.newHashMap();
         List<Map<String, Object>> others = dataSourceFactory.getOthers();
+        //如果未定义其他库，则返回空的dataSourceMap
         if (CollectionUtils.isEmpty(others)) {
-            //如果未定义其他库，则返回空的dataSourceMap
             return dataSourceMap;
-        } else {
-            //如果定义了其他库，则构建其他库连接池
-            for (Map<String, Object> other : others) {
-                DataSource dataSource = dataSourceFactory.createDataSource(other);
-                //如果开启了XA模式，则对dataSource进行XA处理
-                if (dataSourceFactory.isEnableXA()) {
-                    Asserts.check(
-                            ApplicationContextHolder.getApplicationContext().containsLocalBean(XADataSourceFactoryFunc.class.getName()),
-                            XADataSourceFactoryFunc.class.getName().concat(" is missing")
-                    );
-                    dataSource = ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class)
-                            .rebuildDataSource(dataSource);
-                    Asserts.check(dataSource != null, "dataSource is null");
-                    ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class)
-                            .putDataSourceMap(dataSourceMap, dataSource);
-                } else {
-                    dataSourceMap.put(((DruidDataSource) dataSource).getName(), dataSource);
-                }
+        }
+        //如果定义了其他库，则构建其他库连接池
+        for (Map<String, Object> other : others) {
+            DataSource dataSource = dataSourceFactory.createDataSource(other);
+            String dataSourceName;
+            //如果开启了XA模式，则对dataSource进行XA处理
+            if (dataSource instanceof DruidXADataSource) {
+                Asserts.check(
+                        ApplicationContextHolder.getApplicationContext().containsLocalBean(XADataSourceFactoryFunc.class.getName()),
+                        XADataSourceFactoryFunc.class.getName().concat(" is missing")
+                );
+                dataSource = ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class)
+                        .rebuildDataSource(dataSource);
+                Asserts.check(dataSource != null, "dataSource is null");
+                dataSourceName = ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class)
+                        .getDataSourceName(dataSource);
+                Asserts.check(dataSourceName != null, "dataSourceName is null");
+            } else {
+                dataSourceName = ((DruidDataSource) dataSource).getName();
             }
+            dataSourceMap.put(dataSourceName, dataSource);
         }
         return dataSourceMap;
     }

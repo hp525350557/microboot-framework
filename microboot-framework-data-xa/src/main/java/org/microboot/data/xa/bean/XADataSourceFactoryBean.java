@@ -5,7 +5,6 @@ import org.microboot.data.func.XADataSourceFactoryFunc;
 import org.springframework.boot.jta.atomikos.AtomikosDataSourceBean;
 
 import javax.sql.DataSource;
-import java.util.Map;
 
 /**
  * @author 胡鹏
@@ -13,7 +12,7 @@ import java.util.Map;
 public class XADataSourceFactoryBean implements XADataSourceFactoryFunc {
 
     /**
-     * 构建DataSource
+     * 构建XADataSource
      *
      * @param dataSource
      * @return
@@ -42,21 +41,5 @@ public class XADataSourceFactoryBean implements XADataSourceFactoryFunc {
             return ((DruidXADataSource) atomikosDataSourceBean.getXaDataSource()).getName();
         }
         return null;
-    }
-
-    /**
-     * 存储DataSourceName -> DataSource的关系
-     *
-     * @param dataSourceMap
-     * @param dataSource
-     */
-    @Override
-    public void putDataSourceMap(Map<String, DataSource> dataSourceMap, DataSource dataSource) {
-        if (dataSourceMap == null || dataSource == null) {
-            return;
-        }
-        if (dataSource instanceof AtomikosDataSourceBean) {
-            dataSourceMap.put(((AtomikosDataSourceBean) dataSource).getUniqueResourceName(), dataSource);
-        }
     }
 }
