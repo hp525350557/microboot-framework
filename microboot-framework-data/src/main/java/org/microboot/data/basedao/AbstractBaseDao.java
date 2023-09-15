@@ -323,7 +323,7 @@ public abstract class AbstractBaseDao {
      * @throws Exception
      */
     protected int executeBySql(String sql, MapSqlParameterSource parameterSource, NamedParameterJdbcTemplate namedParameterJdbcTemplate) throws Exception {
-        Assert.notNull(parameterSource, "parameterSource must not be null");
+        Assert.notNull(parameterSource, "parameterSource is null");
         logger.info(sql + " -> " + ConvertUtils.object2Json(parameterSource));
         return namedParameterJdbcTemplate.update(sql, parameterSource);
     }

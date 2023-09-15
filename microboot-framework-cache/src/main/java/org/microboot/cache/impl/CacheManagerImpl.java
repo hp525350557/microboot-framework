@@ -2,6 +2,7 @@ package org.microboot.cache.impl;
 
 import org.springframework.cache.Cache;
 import org.springframework.cache.transaction.AbstractTransactionSupportingCacheManager;
+import org.springframework.util.Assert;
 
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
@@ -24,6 +25,7 @@ public class CacheManagerImpl extends AbstractTransactionSupportingCacheManager 
     }
 
     public void setCache(String name, Cache cache) {
+        Assert.isTrue(!cacheMap.contains(name), name + " already exists");
         cacheMap.put(name, cache);
     }
 }
