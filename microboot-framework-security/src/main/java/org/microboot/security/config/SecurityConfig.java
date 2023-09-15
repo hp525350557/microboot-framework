@@ -56,10 +56,10 @@ public class SecurityConfig {
     @Bean(name = "org.apache.shiro.session.mgt.SessionManager")
     public SessionManager initSessionManager() {
         //本框架由于使用无状态登录，所以要禁用session
-        DefaultSessionManager defaultWebSessionManager = new DefaultSessionManager();
+        DefaultSessionManager defaultSessionManager = new DefaultSessionManager();
         //是否开启定时调度器进行检测过期session，缺省值为true
-        defaultWebSessionManager.setSessionValidationSchedulerEnabled(SESSION_VALIDATION_SCHEDULER_ENABLED);
-        return defaultWebSessionManager;
+        defaultSessionManager.setSessionValidationSchedulerEnabled(SESSION_VALIDATION_SCHEDULER_ENABLED);
+        return defaultSessionManager;
     }
 
     @Bean(name = "org.apache.shiro.mgt.SecurityManager")
