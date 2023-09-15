@@ -9,6 +9,6 @@ import org.springframework.util.ObjectUtils;
 public class KeyUtils {
 
     public static String newKey(String cacheName, Object key) {
-        return cacheName + '&' + StringUtils.replace(ObjectUtils.nullSafeToString(key), StringUtils.SPACE, "&");
+        return cacheName + '&' + StringUtils.replace(ObjectUtils.nullSafeToString(key), StringUtils.SPACE, "");
     }
 }

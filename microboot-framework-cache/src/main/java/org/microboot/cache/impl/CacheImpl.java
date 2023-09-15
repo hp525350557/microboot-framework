@@ -80,16 +80,16 @@ import java.util.concurrent.Callable;
  *             }
  *         },"Thread1").start();
  *
- *         new Thread(() -> {
- *             synchronized (s2) {
- *                 try {
- *                     Thread.sleep(2000);
- *                 } catch (InterruptedException e) {
- *                     e.printStackTrace();
- *                 }
- *                 System.out.println(Thread.currentThread().getName());
- *             }
- *         },"Thread2").start();
+ *          new Thread(() -> {
+ *              synchronized (s2) {
+ *                  try {
+ *                      Thread.sleep(2000);
+ *                  } catch (InterruptedException e) {
+ *                      e.printStackTrace();
+ *                  }
+ *                  System.out.println(Thread.currentThread().getName());
+ *              }
+ *          },"Thread2").start();
  *
  *         //但是在map中的key是通过字符串值来进行取值的，所以，即使字符串对象不是同一个，只要值一致，就可以获得到数据
  *         Map<String, Object> map1 = Maps.newConcurrentMap();
@@ -107,23 +107,22 @@ import java.util.concurrent.Callable;
  *
  *     static class Obj {
  *         private String key = "key";
- *
  *         @Override
  *         public String toString() {
  *             return "Obj{" +
- *                     "key='" + key + '\'' +
+ *                         "key='" + key + '\'' +
  *                     '}';
  *         }
  *     }
  * }
  *
  * 老版本的lockMap使用的是普通Object做为锁对象，
- *      测试发现仍然会有线程安全性问题
- *      新版本使用ReentrantLock代替synchronized(Object对象)
+ * 测试发现仍然会有线程安全性问题
+ * 新版本使用ReentrantLock代替synchronized(Object对象)
  *
  * 老版本是直接实现Cache接口
- *      新版本参考了RedisCache后，改为继承AbstractValueAdaptingCache
- *      并对一系列列方法做了进一步的优化和调整
+ * 新版本参考了RedisCache后，改为继承AbstractValueAdaptingCache
+ * 并对一系列列方法做了进一步的优化和调整
  *
  * CacheImpl和AbstractCache没有直接关系
  * CacheImpl是microboot的缓存入口，配置文件中的缓存组合就保存在CacheImpl中
@@ -150,13 +149,13 @@ public class CacheImpl extends AbstractValueAdaptingCache {
 
     @Override
     public void evict(Object key) {
+        if (key == null) {
+            return;
+        }
         String newKey = KeyUtils.newKey(this.name, key);
         ApplicationContextHolder.getBean(SyncFunc.class.getName(), SyncFunc.class).spinSync(newKey, () -> {
-            if (key == null) {
-                return;
-            }
             for (Cache cache : this.caches) {
-                cache.evict(key);
+                cache.evict(newKey);
             }
         });
     }
@@ -177,18 +176,17 @@ public class CacheImpl extends AbstractValueAdaptingCache {
         if (key == null) {
             return null;
         }
-        Object cacheValue;
-        ValueWrapper valueWrapper;
+        String newKey = KeyUtils.newKey(this.name, key);
         //记录空值Cache，并在返回数据之前，填充所有空值Cache
         List<Cache> nullValueCaches = Lists.newArrayList();
         for (Cache cache : this.caches) {
-            valueWrapper = cache.get(key);
+            ValueWrapper valueWrapper = cache.get(newKey);
             if (valueWrapper == null) {
                 nullValueCaches.add(cache);
                 continue;
             }
-            cacheValue = valueWrapper.get();
-            this.nullValueCachesPut(nullValueCaches, key, cacheValue);
+            Object cacheValue = valueWrapper.get();
+            this.nullValueCachesPut(nullValueCaches, newKey, cacheValue);
             return cacheValue;
         }
         return null;
@@ -212,18 +210,18 @@ public class CacheImpl extends AbstractValueAdaptingCache {
      */
     @Override
     public <T> T get(Object key, Callable<T> callable) {
+        if (key == null) {
+            return null;
+        }
         String newKey = KeyUtils.newKey(this.name, key);
         return ApplicationContextHolder.getBean(SyncFunc.class.getName(), SyncFunc.class).spinSync(newKey, () -> {
-            if (key == null) {
-                return null;
-            }
             /*
                 valueWrapper有三种可能：
                     1、null：多级缓存中没有业务数据，执行业务方法
                     2、SimpleValueWrapper(null)：多级缓存中缓存了NullValue.INSTANCE，返回null
                     3、SimpleValueWrapper(Object)：多级缓存中缓存了业务数据，返回业务数据
              */
-            ValueWrapper valueWrapper = this.get(key);
+            ValueWrapper valueWrapper = this.get(newKey);
             if (valueWrapper != null) {
                 return (T) valueWrapper.get();
             }
@@ -231,7 +229,7 @@ public class CacheImpl extends AbstractValueAdaptingCache {
             T value = callable.call();
             //value != null：则可以将数据缓存下来，并返回value
             if (value != null) {
-                this.nullValueCachesPut(this.caches, key, value);
+                this.nullValueCachesPut(this.caches, newKey, value);
                 return value;
             }
             //value == null：则通过preProcessCacheValue方法处理一下
@@ -241,7 +239,7 @@ public class CacheImpl extends AbstractValueAdaptingCache {
                 2、cacheValue == null：说明未开启缓存null值
              */
             if (cacheValue != null) {
-                this.nullValueCachesPut(this.caches, key, cacheValue);
+                this.nullValueCachesPut(this.caches, newKey, cacheValue);
             }
             /*
                 执行到此处，说明以下两点：
@@ -256,25 +254,25 @@ public class CacheImpl extends AbstractValueAdaptingCache {
 
     @Override
     public void put(Object key, Object value) {
+        if (key == null) {
+            return;
+        }
         String newKey = KeyUtils.newKey(this.name, key);
         ApplicationContextHolder.getBean(SyncFunc.class.getName(), SyncFunc.class).spinSync(newKey, () -> {
-            if (key == null) {
-                return;
-            }
             Object cacheValue = this.preProcessCacheValue(value);
             for (Cache cache : this.caches) {
-                cache.put(key, cacheValue);
+                cache.put(newKey, cacheValue);
             }
         });
     }
 
     @Override
     public ValueWrapper putIfAbsent(Object key, Object value) {
+        if (key == null) {
+            return null;
+        }
         String newKey = KeyUtils.newKey(this.name, key);
         return ApplicationContextHolder.getBean(SyncFunc.class.getName(), SyncFunc.class).spinSync(newKey, () -> {
-            if (key == null) {
-                return null;
-            }
             /*
                 putIfAbsent方法的语义：
                     当缓存中有数据，则忽略新值，返回老值
@@ -284,10 +282,10 @@ public class CacheImpl extends AbstractValueAdaptingCache {
                     2、SimpleValueWrapper(null)：多级缓存中缓存了NullValue.INSTANCE，缓存新值，返回null
                     3、SimpleValueWrapper(Object)：多级缓存中缓存了业务数据，忽略新值，返回老值
              */
-            ValueWrapper valueWrapper = this.get(key);
+            ValueWrapper valueWrapper = this.get(newKey);
             if (valueWrapper == null || valueWrapper.get() == null) {
                 Object cacheValue = this.preProcessCacheValue(value);
-                this.nullValueCachesPut(this.caches, key, cacheValue);
+                this.nullValueCachesPut(this.caches, newKey, cacheValue);
                 return null;
             }
             return valueWrapper;
@@ -295,13 +293,13 @@ public class CacheImpl extends AbstractValueAdaptingCache {
     }
 
     @Override
-    public String getName() {
-        return this.name;
+    public Object getNativeCache() {
+        return this;
     }
 
     @Override
-    public Object getNativeCache() {
-        return this;
+    public String getName() {
+        return this.name;
     }
 
     public void setName(String name) {
