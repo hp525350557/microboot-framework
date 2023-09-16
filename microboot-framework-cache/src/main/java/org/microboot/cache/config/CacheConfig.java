@@ -3,6 +3,7 @@ package org.microboot.cache.config;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import net.sf.ehcache.Ehcache;
 import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.spring.MemcachedClientFactoryBean;
 import org.apache.activemq.command.ActiveMQTopic;
@@ -246,35 +247,17 @@ public class CacheConfig {
 
     /************************************* Caffeine相关初始化 *****************************************/
     /**
-     * Caffeine初始化
-     *
-     * @param cacheProperties
-     * @return
-     */
-    @SuppressWarnings("rawtypes")
-    @Bean(name = "com.github.benmanes.caffeine.cache.Caffeine")
-    @ConditionalOnProperty(name = "cache.caffeine.using", havingValue = "true")
-    public Caffeine initCaffeine(CacheProperties cacheProperties) {
-        Caffeine caffeine;
-        if (cacheProperties != null) {
-            caffeine = Caffeine.from(cacheProperties.getCaffeine().getSpec());
-        } else {
-            caffeine = Caffeine.newBuilder();
-        }
-        return caffeine;
-    }
-
-    /**
      * CaffeineCache初始化
      *
-     * @param caffeine
+     * @param cacheProperties
      * @param environment
      * @return
      */
-    @SuppressWarnings({"unchecked", "rawtypes"})
     @Bean(name = "org.springframework.cache.caffeine.CaffeineCache")
     @ConditionalOnProperty(name = "cache.caffeine.using", havingValue = "true")
-    public CaffeineCache initCaffeineCache(Caffeine caffeine, Environment environment) {
+    public CaffeineCache initCaffeineCache(CacheProperties cacheProperties, Environment environment) {
+        Caffeine caffeine = cacheProperties != null
+                ? Caffeine.from(cacheProperties.getCaffeine().getSpec()) : Caffeine.newBuilder();
         boolean caffeineAllowNullValues = StringUtils.isBlank(environment.getProperty("cache.caffeine.allow-null-values"))
                 ? CacheConstant.DEFAULT_CAFFEINE_ALLOW_NULL_VALUES : Boolean.parseBoolean(environment.getProperty("cache.caffeine.allow-null-values"));
         String caffeineName = StringUtils.isBlank(environment.getProperty("cache.caffeine.name"))
@@ -336,37 +319,66 @@ public class CacheConfig {
     }
 
     /**
-     * EhcacheImpl初始化
+     * Ehcache初始化
      *
      * @param ehCacheFactoryBean
+     * @return
+     * @throws Exception
+     */
+    @Bean(name = "net.sf.ehcache.Ehcache")
+    @ConditionalOnProperty(name = "cache.ehcache.using", havingValue = "true")
+    public Ehcache initEhcache(EhCacheFactoryBean ehCacheFactoryBean) throws Exception {
+        return ehCacheFactoryBean.getObject();
+    }
+
+    /**
+     * EhcacheImpl初始化
+     *
+     * @param ehcache
+     * @param environment
      * @return
      */
     @Bean(name = "org.microboot.cache.impl.ehcache.EhcacheImpl")
     @ConditionalOnProperty(name = "cache.ehcache.using", havingValue = "true")
-    public EhcacheImpl initEhcacheImpl(EhCacheFactoryBean ehCacheFactoryBean, Environment environment) {
+    public EhcacheImpl initEhcacheImpl(Ehcache ehcache, Environment environment) {
         String ehcacheName = StringUtils.isBlank(environment.getProperty("cache.ehcache.name"))
                 ? CacheConstant.DEFAULT_EHCACHE_NAME : environment.getProperty("cache.ehcache.name");
-        return new EhcacheImpl(ehcacheName, ehCacheFactoryBean.getObject());
+        return new EhcacheImpl(ehcacheName, ehcache);
     }
 
     /*************************************Memcache相关初始化*****************************************/
     /**
-     * MemcachedImpl初始化
+     * MemcachedClient初始化
      *
      * @param memcachedClientFactoryBean
      * @return
      * @throws Exception
      */
+    @Bean(name = "net.spy.memcached.MemcachedClient")
+    @ConditionalOnProperty(name = "cache.memcached.using", havingValue = "true")
+    public MemcachedClient initMemcachedClient(MemcachedClientFactoryBean memcachedClientFactoryBean) throws Exception {
+        return (MemcachedClient) memcachedClientFactoryBean.getObject();
+    }
+
+
+    /**
+     * MemcachedImpl初始化
+     *
+     * @param memcachedClient
+     * @param environment
+     * @return
+     * @throws Exception
+     */
     @Bean(name = "org.microboot.cache.impl.memcached.MemcachedImpl")
     @ConditionalOnProperty(name = "cache.memcached.using", havingValue = "true")
-    public MemcachedImpl initMemcachedImpl(MemcachedClientFactoryBean memcachedClientFactoryBean, Environment environment) throws Exception {
+    public MemcachedImpl initMemcachedImpl(MemcachedClient memcachedClient, Environment environment) throws Exception {
         int cacheExpire = StringUtils.isBlank(environment.getProperty("cache.memcached.expire"))
                 ? CacheConstant.DEFAULT_CACHE_EXPIRE : Integer.parseInt(environment.getProperty("cache.memcached.expire"));
         boolean isDynamic = StringUtils.isBlank(environment.getProperty("cache.memcached.isDynamic"))
                 ? CacheConstant.DEFAULT_CACHE_IS_DYNAMIC : Boolean.parseBoolean(environment.getProperty("cache.memcached.isDynamic"));
         String cacheName = StringUtils.isBlank(environment.getProperty("cache.memcached.name"))
                 ? CacheConstant.DEFAULT_MEMCACHED_NAME : environment.getProperty("cache.memcached.name");
-        return new MemcachedImpl(cacheName, cacheExpire, isDynamic, (MemcachedClient) memcachedClientFactoryBean.getObject());
+        return new MemcachedImpl(cacheName, cacheExpire, isDynamic, memcachedClient);
     }
 
     /************************************* Redis相关初始化 *****************************************/
@@ -409,7 +421,6 @@ public class CacheConfig {
         return new RedisImpl(cacheName, cacheExpire, isDynamic, redisTemplate);
     }
 
-    @SuppressWarnings("unchecked")
     private List<Cache> getCacheList(String classNames) throws ClassNotFoundException {
         if (StringUtils.isBlank(classNames)) {
             throw new ClassNotFoundException();
@@ -427,7 +438,6 @@ public class CacheConfig {
         return cacheList;
     }
 
-    @SuppressWarnings("unchecked")
     private List<Cache> getCacheList(String classNames, boolean isLocal) throws ClassNotFoundException {
         if (StringUtils.isBlank(classNames)) {
             throw new ClassNotFoundException();
