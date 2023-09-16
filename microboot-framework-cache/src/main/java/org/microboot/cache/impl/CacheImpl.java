@@ -220,8 +220,9 @@ public class CacheImpl extends AbstractValueAdaptingCache {
                     1、null：多级缓存中没有业务数据，执行业务方法
                     2、SimpleValueWrapper(null)：多级缓存中缓存了NullValue.INSTANCE，返回null
                     3、SimpleValueWrapper(Object)：多级缓存中缓存了业务数据，返回业务数据
+                注意：这里get方法的参数必须用key，不能用newKey，因为get方法会调用lookup方法，在lookup方法中将key转换成了newKey
              */
-            ValueWrapper valueWrapper = this.get(newKey);
+            ValueWrapper valueWrapper = this.get(key);
             if (valueWrapper != null) {
                 return (T) valueWrapper.get();
             }
@@ -281,8 +282,9 @@ public class CacheImpl extends AbstractValueAdaptingCache {
                     1、null：多级缓存中没有业务数据，缓存新值，返回null
                     2、SimpleValueWrapper(null)：多级缓存中缓存了NullValue.INSTANCE，缓存新值，返回null
                     3、SimpleValueWrapper(Object)：多级缓存中缓存了业务数据，忽略新值，返回老值
+                注意：这里get方法的参数必须用key，不能用newKey，因为get方法会调用lookup方法，在lookup方法中将key转换成了newKey
              */
-            ValueWrapper valueWrapper = this.get(newKey);
+            ValueWrapper valueWrapper = this.get(key);
             if (valueWrapper == null || valueWrapper.get() == null) {
                 Object cacheValue = this.preProcessCacheValue(value);
                 this.nullValueCachesPut(this.caches, newKey, cacheValue);
