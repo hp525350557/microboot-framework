@@ -60,7 +60,12 @@ public class MemcachedImpl extends AbstractCache {
         if (StringUtils.isBlank(newKey)) {
             return;
         }
-        //ThreadLocalRandom.current()比new Random()获取随机数更高效
-        this.memcachedClient.set(newKey, isDynamic ? (expire <= 0 ? expire : ThreadLocalRandom.current().nextInt(1, expire)) : expire, value);
+        if (expire <= 0) {
+            //如果expire小于等于0，则设置过期时间为0，即：永不失效
+            this.memcachedClient.set(newKey, 0, value);
+        } else {
+            //ThreadLocalRandom.current()比new Random()获取随机数更高效（随机区间：1 ~ expire）
+            this.memcachedClient.set(newKey, isDynamic ? ThreadLocalRandom.current().nextInt(1, expire) : expire, value);
+        }
     }
 }
