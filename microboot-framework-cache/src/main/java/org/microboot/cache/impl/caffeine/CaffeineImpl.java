@@ -1,8 +1,7 @@
 package org.microboot.cache.impl.caffeine;
 
-import org.apache.commons.lang3.StringUtils;
-import org.microboot.cache.utils.KeyUtils;
 import org.microboot.cache.impl.AbstractLocalCache;
+import org.microboot.cache.utils.KeyUtils;
 import org.springframework.cache.Cache;
 import org.springframework.cache.caffeine.CaffeineCache;
 
@@ -32,10 +31,10 @@ public class CaffeineImpl extends AbstractLocalCache {
 
     @Override
     public void evict(Object key) {
-        String newKey = KeyUtils.newKey(this.name, key);
-        if (StringUtils.isBlank(newKey)) {
+        if (key == null) {
             return;
         }
+        String newKey = KeyUtils.newKey(this.name, key);
         this.caffeineCache.evict(newKey);
         this.fanout(newKey);
     }
@@ -43,9 +42,6 @@ public class CaffeineImpl extends AbstractLocalCache {
     @Override
     protected Object getValue(Object key) {
         String newKey = KeyUtils.newKey(this.name, key);
-        if (StringUtils.isBlank(newKey)) {
-            return null;
-        }
         Cache.ValueWrapper valueWrapper = this.caffeineCache.get(newKey);
         return (valueWrapper != null ? valueWrapper.get() : null);
     }
@@ -53,9 +49,6 @@ public class CaffeineImpl extends AbstractLocalCache {
     @Override
     protected void setValue(Object key, Object value) {
         String newKey = KeyUtils.newKey(this.name, key);
-        if (StringUtils.isBlank(newKey)) {
-            return;
-        }
         this.caffeineCache.put(newKey, value);
         this.fanout(newKey, value);
     }
@@ -67,6 +60,9 @@ public class CaffeineImpl extends AbstractLocalCache {
 
     @Override
     public void evictByMQ(Object key) {
+        if (key == null) {
+            return;
+        }
         this.caffeineCache.evict(key);
     }
 }

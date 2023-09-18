@@ -1,6 +1,5 @@
 package org.microboot.cache.impl.redis;
 
-import org.apache.commons.lang3.StringUtils;
 import org.microboot.cache.impl.AbstractCache;
 import org.microboot.cache.utils.KeyUtils;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -41,28 +40,22 @@ public class RedisImpl extends AbstractCache {
 
     @Override
     public void evict(Object key) {
-        String newKey = KeyUtils.newKey(this.name, key);
-        if (StringUtils.isBlank(newKey)) {
+        if (key == null) {
             return;
         }
+        String newKey = KeyUtils.newKey(this.name, key);
         this.redisTemplate.delete(newKey);
     }
 
     @Override
     protected Object getValue(Object key) {
         String newKey = KeyUtils.newKey(this.name, key);
-        if (StringUtils.isBlank(newKey)) {
-            return null;
-        }
         return this.redisTemplate.opsForValue().get(newKey);
     }
 
     @Override
     protected void setValue(Object key, Object value) {
         String newKey = KeyUtils.newKey(this.name, key);
-        if (StringUtils.isBlank(newKey)) {
-            return;
-        }
         if (expire <= 0) {
             //如果expire小于等于0，则不设置过期时间，即：永不失效
             this.redisTemplate.opsForValue().set(newKey, value);

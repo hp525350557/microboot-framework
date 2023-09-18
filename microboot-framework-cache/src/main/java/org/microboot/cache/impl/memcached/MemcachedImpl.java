@@ -1,7 +1,6 @@
 package org.microboot.cache.impl.memcached;
 
 import net.spy.memcached.MemcachedClient;
-import org.apache.commons.lang3.StringUtils;
 import org.microboot.cache.impl.AbstractCache;
 import org.microboot.cache.utils.KeyUtils;
 
@@ -38,28 +37,22 @@ public class MemcachedImpl extends AbstractCache {
 
     @Override
     public void evict(Object key) {
-        String newKey = KeyUtils.newKey(this.name, key);
-        if (StringUtils.isBlank(newKey)) {
+        if (key == null) {
             return;
         }
+        String newKey = KeyUtils.newKey(this.name, key);
         this.memcachedClient.delete(newKey);
     }
 
     @Override
     protected Object getValue(Object key) {
         String newKey = KeyUtils.newKey(this.name, key);
-        if (StringUtils.isBlank(newKey)) {
-            return null;
-        }
         return this.memcachedClient.get(newKey);
     }
 
     @Override
     protected void setValue(Object key, Object value) {
         String newKey = KeyUtils.newKey(this.name, key);
-        if (StringUtils.isBlank(newKey)) {
-            return;
-        }
         if (expire <= 0) {
             //如果expire小于等于0，则设置过期时间为0，即：永不失效
             this.memcachedClient.set(newKey, 0, value);

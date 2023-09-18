@@ -2,9 +2,8 @@ package org.microboot.cache.impl.ehcache;
 
 import net.sf.ehcache.Ehcache;
 import net.sf.ehcache.Element;
-import org.apache.commons.lang3.StringUtils;
-import org.microboot.cache.utils.KeyUtils;
 import org.microboot.cache.impl.AbstractLocalCache;
+import org.microboot.cache.utils.KeyUtils;
 
 /**
  * @author 胡鹏
@@ -32,10 +31,10 @@ public class EhcacheImpl extends AbstractLocalCache {
 
     @Override
     public void evict(Object key) {
-        String newKey = KeyUtils.newKey(this.name, key);
-        if (StringUtils.isBlank(newKey)) {
+        if (key == null) {
             return;
         }
+        String newKey = KeyUtils.newKey(this.name, key);
         this.ehCache.remove(newKey);
         this.fanout(newKey);
     }
@@ -43,9 +42,6 @@ public class EhcacheImpl extends AbstractLocalCache {
     @Override
     protected Object getValue(Object key) {
         String newKey = KeyUtils.newKey(this.name, key);
-        if (StringUtils.isBlank(newKey)) {
-            return null;
-        }
         Element cacheValue = this.ehCache.get(newKey);
         return (cacheValue != null ? cacheValue.getObjectValue() : null);
     }
@@ -53,9 +49,6 @@ public class EhcacheImpl extends AbstractLocalCache {
     @Override
     protected void setValue(Object key, Object value) {
         String newKey = KeyUtils.newKey(this.name, key);
-        if (StringUtils.isBlank(newKey)) {
-            return;
-        }
         this.ehCache.put(new Element(newKey, value));
         this.fanout(newKey, value);
     }
@@ -67,6 +60,9 @@ public class EhcacheImpl extends AbstractLocalCache {
 
     @Override
     public void evictByMQ(Object key) {
+        if (key == null) {
+            return;
+        }
         this.ehCache.remove(key);
     }
 }

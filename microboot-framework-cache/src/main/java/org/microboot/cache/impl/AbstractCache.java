@@ -29,6 +29,9 @@ public abstract class AbstractCache extends AbstractValueAdaptingCache {
      */
     @Override
     protected Object lookup(Object key) {
+        if (key == null) {
+            return null;
+        }
         return this.getValue(key);
     }
 
