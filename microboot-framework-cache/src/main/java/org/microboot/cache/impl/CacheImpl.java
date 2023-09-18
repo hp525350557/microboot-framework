@@ -52,8 +52,7 @@ import java.util.concurrent.Callable;
  * 但Spring的Cache接口中并没有类似的put方法
  * 所以put方法无法把缓存和业务方法包含在锁的作用范围内，缓存和业务方法在多线程环境下天然就不是原子性的
  * 解决方案：
- * 1、通过Spring容器获取CacheImpl的bean，然后在业务方法中调用put方法手动更新缓存
- *    原理是通过数据库的锁来实现同步（不推荐）
+ * 1、通过Spring容器获取CacheImpl的bean，然后在业务方法中调用put方法手动更新缓存，原理是通过数据库的锁来实现同步（不推荐）
  * 2、在调用业务方法的地方加锁，让业务方法和缓存成为一个整体，确保原子性（推荐）
  *
  * 问：为什么不直接用转换成字符串后的newKey作为synchronized的锁对象来实现伴生锁？
@@ -186,7 +185,7 @@ public class CacheImpl extends AbstractValueAdaptingCache {
                 continue;
             }
             Object cacheValue = valueWrapper.get();
-            this.nullValueCachesPut(nullValueCaches, newKey, cacheValue);
+            this.cachesPut(nullValueCaches, newKey, cacheValue);
             return cacheValue;
         }
         return null;
@@ -230,7 +229,7 @@ public class CacheImpl extends AbstractValueAdaptingCache {
             T value = callable.call();
             //value != null：则可以将数据缓存下来，并返回value
             if (value != null) {
-                this.nullValueCachesPut(this.caches, newKey, value);
+                this.cachesPut(this.caches, newKey, value);
                 return value;
             }
             //value == null：则通过preProcessCacheValue方法处理一下
@@ -240,7 +239,7 @@ public class CacheImpl extends AbstractValueAdaptingCache {
                 2、cacheValue == null：说明未开启缓存null值
              */
             if (cacheValue != null) {
-                this.nullValueCachesPut(this.caches, newKey, cacheValue);
+                this.cachesPut(this.caches, newKey, cacheValue);
             }
             /*
                 执行到此处，说明以下两点：
@@ -261,9 +260,7 @@ public class CacheImpl extends AbstractValueAdaptingCache {
         String newKey = KeyUtils.newKey(this.name, key);
         ApplicationContextHolder.getBean(SyncFunc.class.getName(), SyncFunc.class).spinSync(newKey, () -> {
             Object cacheValue = this.preProcessCacheValue(value);
-            for (Cache cache : this.caches) {
-                cache.put(newKey, cacheValue);
-            }
+            this.cachesPut(this.caches, newKey, cacheValue);
         });
     }
 
@@ -287,7 +284,7 @@ public class CacheImpl extends AbstractValueAdaptingCache {
             ValueWrapper valueWrapper = this.get(key);
             if (valueWrapper == null || valueWrapper.get() == null) {
                 Object cacheValue = this.preProcessCacheValue(value);
-                this.nullValueCachesPut(this.caches, newKey, cacheValue);
+                this.cachesPut(this.caches, newKey, cacheValue);
                 return null;
             }
             return valueWrapper;
@@ -312,11 +309,11 @@ public class CacheImpl extends AbstractValueAdaptingCache {
         return caches;
     }
 
-    private void nullValueCachesPut(List<Cache> nullValueCaches, Object key, Object value) {
-        if (CollectionUtils.isEmpty(nullValueCaches)) {
+    private void cachesPut(List<Cache> caches, Object key, Object value) {
+        if (CollectionUtils.isEmpty(caches)) {
             return;
         }
-        for (Cache cache : nullValueCaches) {
+        for (Cache cache : caches) {
             cache.put(key, value);
         }
     }

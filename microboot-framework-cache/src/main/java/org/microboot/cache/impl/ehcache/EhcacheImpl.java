@@ -37,7 +37,7 @@ public class EhcacheImpl extends AbstractLocalCache {
             return;
         }
         this.ehCache.remove(newKey);
-        this.fanout(key);
+        this.fanout(newKey);
     }
 
     @Override
@@ -57,7 +57,7 @@ public class EhcacheImpl extends AbstractLocalCache {
             return;
         }
         this.ehCache.put(new Element(newKey, value));
-        this.fanout(key, value);
+        this.fanout(newKey, value);
     }
 
     @Override
@@ -67,7 +67,6 @@ public class EhcacheImpl extends AbstractLocalCache {
 
     @Override
     public void evictByMQ(Object key) {
-        String newKey = KeyUtils.newKey(this.name, key);
-        this.ehCache.remove(newKey);
+        this.ehCache.remove(key);
     }
 }

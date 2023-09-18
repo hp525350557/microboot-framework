@@ -37,7 +37,7 @@ public class CaffeineImpl extends AbstractLocalCache {
             return;
         }
         this.caffeineCache.evict(newKey);
-        this.fanout(key);
+        this.fanout(newKey);
     }
 
     @Override
@@ -57,7 +57,7 @@ public class CaffeineImpl extends AbstractLocalCache {
             return;
         }
         this.caffeineCache.put(newKey, value);
-        this.fanout(key, value);
+        this.fanout(newKey, value);
     }
 
     @Override
@@ -67,7 +67,6 @@ public class CaffeineImpl extends AbstractLocalCache {
 
     @Override
     public void evictByMQ(Object key) {
-        String newKey = KeyUtils.newKey(this.name, key);
-        this.caffeineCache.evict(newKey);
+        this.caffeineCache.evict(key);
     }
 }
