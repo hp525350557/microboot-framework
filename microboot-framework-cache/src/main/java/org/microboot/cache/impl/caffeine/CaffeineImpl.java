@@ -36,7 +36,11 @@ public class CaffeineImpl extends AbstractLocalCache {
         }
         String newKey = KeyUtils.newKey(this.name, key);
         this.caffeineCache.evict(newKey);
-        this.fanout(newKey);
+        /*
+            注意：这里不能用newKey，因为在MQListenerFunc接口中，会轮询所有本地缓存
+            并执行cache.get(key)和cache.evictByMQ(key)，这两个方法最终都会将key构建成newKey
+         */
+        this.fanout(key);
     }
 
     @Override
@@ -50,7 +54,11 @@ public class CaffeineImpl extends AbstractLocalCache {
     protected void setValue(Object key, Object value) {
         String newKey = KeyUtils.newKey(this.name, key);
         this.caffeineCache.put(newKey, value);
-        this.fanout(newKey, value);
+        /*
+            注意：这里不能用newKey，因为在MQListenerFunc接口中，会轮询所有本地缓存
+            并执行cache.get(key)和cache.evictByMQ(key)，这两个方法最终都会将key构建成newKey
+         */
+        this.fanout(key, value);
     }
 
     @Override
@@ -63,6 +71,7 @@ public class CaffeineImpl extends AbstractLocalCache {
         if (key == null) {
             return;
         }
-        this.caffeineCache.evict(key);
+        String newKey = KeyUtils.newKey(this.name, key);
+        this.caffeineCache.evict(newKey);
     }
 }
