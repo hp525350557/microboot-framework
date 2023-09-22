@@ -24,7 +24,7 @@ public abstract class AbstractLocalCache extends AbstractCache {
         this.evictLocalCache(key);
         /*
             注意：这里不能用newKey，因为在MQListenerFunc接口中，会轮询所有本地缓存
-            并执行cache.get(key)和cache.evictByMQ(key)，这两个方法最终都会将key构建成newKey
+            并执行cache.get(key)和cache.evictLocalCache(key)，这两个方法最终都会将key构建成newKey
          */
         this.fanout(key);
     }
@@ -34,7 +34,7 @@ public abstract class AbstractLocalCache extends AbstractCache {
         this.setLocalCache(key, value);
         /*
             注意：这里不能用newKey，因为在MQListenerFunc接口中，会轮询所有本地缓存
-            并执行cache.get(key)和cache.evictByMQ(key)，这两个方法最终都会将key构建成newKey
+            并执行cache.get(key)和cache.evictLocalCache(key)，这两个方法最终都会将key构建成newKey
          */
         this.fanout(key, value);
     }
