@@ -55,7 +55,7 @@ public interface MQListenerFunc {
                     continue;
                 }
                 if (key == null) {
-                    cache.clearByMQ();
+                    cache.clearLocalCache();
                 } else {
                     /*
                         当开启多个服务时，本地缓存通过消息队列的广播来清除被更新的数据，以达到微服务之间本地缓存同步的效果
@@ -82,7 +82,7 @@ public interface MQListenerFunc {
                     if (StringUtils.equals(md5, currMd5)) {
                         continue;
                     }
-                    cache.evictByMQ(key);
+                    cache.evictLocalCache(key);
                 }
             }
         } catch (Exception e) {

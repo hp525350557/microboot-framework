@@ -24,26 +24,6 @@ public class EhcacheImpl extends AbstractLocalCache {
     }
 
     @Override
-    public void clear() {
-        this.ehCache.flush();
-        this.fanout();
-    }
-
-    @Override
-    public void evict(Object key) {
-        if (key == null) {
-            return;
-        }
-        String newKey = KeyUtils.newKey(this.name, key);
-        this.ehCache.remove(newKey);
-        /*
-            注意：这里不能用newKey，因为在MQListenerFunc接口中，会轮询所有本地缓存
-            并执行cache.get(key)和cache.evictByMQ(key)，这两个方法最终都会将key构建成newKey
-         */
-        this.fanout(key);
-    }
-
-    @Override
     protected Object getValue(Object key) {
         String newKey = KeyUtils.newKey(this.name, key);
         Element cacheValue = this.ehCache.get(newKey);
@@ -51,27 +31,19 @@ public class EhcacheImpl extends AbstractLocalCache {
     }
 
     @Override
-    protected void setValue(Object key, Object value) {
-        String newKey = KeyUtils.newKey(this.name, key);
-        this.ehCache.put(new Element(newKey, value));
-        /*
-            注意：这里不能用newKey，因为在MQListenerFunc接口中，会轮询所有本地缓存
-            并执行cache.get(key)和cache.evictByMQ(key)，这两个方法最终都会将key构建成newKey
-         */
-        this.fanout(key, value);
-    }
-
-    @Override
-    public void clearByMQ() {
+    public void clearLocalCache() {
         this.ehCache.flush();
     }
 
     @Override
-    public void evictByMQ(Object key) {
-        if (key == null) {
-            return;
-        }
+    public void evictLocalCache(Object key) {
         String newKey = KeyUtils.newKey(this.name, key);
         this.ehCache.remove(newKey);
+    }
+
+    @Override
+    public void setLocalCache(Object key, Object value) {
+        String newKey = KeyUtils.newKey(this.name, key);
+        this.ehCache.put(new Element(newKey, value));
     }
 }
