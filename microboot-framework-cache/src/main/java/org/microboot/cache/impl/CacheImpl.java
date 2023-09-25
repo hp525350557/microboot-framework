@@ -5,7 +5,6 @@ import org.apache.commons.collections.CollectionUtils;
 import org.microboot.cache.utils.KeyUtils;
 import org.microboot.core.bean.ApplicationContextHolder;
 import org.microboot.core.func.SyncFunc;
-import org.springframework.cache.Cache;
 import org.springframework.cache.support.AbstractValueAdaptingCache;
 import org.springframework.cache.support.NullValue;
 
@@ -133,7 +132,7 @@ public class CacheImpl extends AbstractValueAdaptingCache {
 
     private String name;
 
-    private final List<Cache> caches = Lists.newArrayList();
+    private final List<AbstractCache> caches = Lists.newArrayList();
 
     public CacheImpl(boolean allowNullValues) {
         super(allowNullValues);
@@ -141,7 +140,7 @@ public class CacheImpl extends AbstractValueAdaptingCache {
 
     @Override
     public void clear() {
-        for (Cache cache : this.caches) {
+        for (AbstractCache cache : this.caches) {
             cache.clear();
         }
     }
@@ -153,7 +152,7 @@ public class CacheImpl extends AbstractValueAdaptingCache {
         }
         String newKey = KeyUtils.newKey(this.name, key);
         ApplicationContextHolder.getBean(SyncFunc.class.getName(), SyncFunc.class).spinSync(newKey, () -> {
-            for (Cache cache : this.caches) {
+            for (AbstractCache cache : this.caches) {
                 cache.evict(newKey);
             }
         });
@@ -177,8 +176,8 @@ public class CacheImpl extends AbstractValueAdaptingCache {
         }
         String newKey = KeyUtils.newKey(this.name, key);
         //记录空值Cache，并在返回数据之前，填充所有空值Cache
-        List<Cache> nullValueCaches = Lists.newArrayList();
-        for (Cache cache : this.caches) {
+        List<AbstractCache> nullValueCaches = Lists.newArrayList();
+        for (AbstractCache cache : this.caches) {
             ValueWrapper valueWrapper = cache.get(newKey);
             if (valueWrapper == null) {
                 nullValueCaches.add(cache);
@@ -305,15 +304,15 @@ public class CacheImpl extends AbstractValueAdaptingCache {
         this.name = name;
     }
 
-    public List<Cache> getCaches() {
+    public List<AbstractCache> getCaches() {
         return caches;
     }
 
-    private void cachesPut(List<Cache> caches, Object key, Object value) {
+    private void cachesPut(List<AbstractCache> caches, Object key, Object value) {
         if (CollectionUtils.isEmpty(caches)) {
             return;
         }
-        for (Cache cache : caches) {
+        for (AbstractCache cache : caches) {
             cache.put(key, value);
         }
     }

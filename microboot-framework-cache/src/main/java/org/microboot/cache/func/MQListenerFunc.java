@@ -5,13 +5,13 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.microboot.cache.entity.CacheMessage;
+import org.microboot.cache.impl.AbstractCache;
 import org.microboot.cache.impl.AbstractLocalCache;
 import org.microboot.core.bean.ApplicationContextHolder;
 import org.microboot.core.func.Func0;
 import org.microboot.core.utils.ConvertUtils;
 import org.microboot.core.utils.CryptoUtils;
 import org.microboot.core.utils.LoggerUtils;
-import org.springframework.cache.Cache;
 
 import java.util.Set;
 
@@ -70,7 +70,7 @@ public interface MQListenerFunc {
                         因此在调用setValue方法时需要通过缓存数据的字节数组来判断数据是否真正变化
                         只有数据真的发生变化了的服务，才需要清除
                      */
-                    Cache.ValueWrapper valueWrapper = cache.get(key);
+                    AbstractCache.ValueWrapper valueWrapper = cache.get(key);
                     if (valueWrapper == null) {
                         continue;
                     }

@@ -14,6 +14,7 @@ import org.microboot.cache.bean.ActiveMQProvider;
 import org.microboot.cache.constant.CacheConstant;
 import org.microboot.cache.func.MQListenerFunc;
 import org.microboot.cache.func.MQProviderFunc;
+import org.microboot.cache.impl.AbstractCache;
 import org.microboot.cache.impl.AbstractLocalCache;
 import org.microboot.cache.impl.CacheImpl;
 import org.microboot.cache.impl.CacheManagerImpl;
@@ -28,7 +29,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.cache.CacheProperties;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.cache.Cache;
 import org.springframework.cache.caffeine.CaffeineCache;
 import org.springframework.cache.ehcache.EhCacheFactoryBean;
 import org.springframework.cache.ehcache.EhCacheManagerFactoryBean;
@@ -109,7 +109,7 @@ public class CacheConfig {
     @Bean(name = "microboot.cache")
     public CacheImpl initCacheImpl(Environment environment) throws ClassNotFoundException {
         String classNames = environment.getProperty("cache.class");
-        List<Cache> cacheList = getCacheList(classNames);
+        List<AbstractCache> cacheList = getCacheList(classNames);
         boolean allowNullValues = StringUtils.isBlank(environment.getProperty("cache.allow-null-values"))
                 ? CacheConstant.DEFAULT_CACHE_ALLOW_NULL_VALUES : Boolean.parseBoolean(environment.getProperty("cache.allow-null-values"));
         String cacheName = StringUtils.isBlank(environment.getProperty("cache.name"))
@@ -128,7 +128,7 @@ public class CacheConfig {
     @ConditionalOnProperty(name = "cache.local.class")
     public CacheImpl initLocalCacheImpl(Environment environment) throws ClassNotFoundException {
         String classNames = environment.getProperty("cache.local.class");
-        List<Cache> cacheList = getCacheList(classNames, true);
+        List<AbstractCache> cacheList = getCacheList(classNames, true);
         boolean allowNullValues = StringUtils.isBlank(environment.getProperty("cache.allow-null-values"))
                 ? CacheConstant.DEFAULT_CACHE_ALLOW_NULL_VALUES : Boolean.parseBoolean(environment.getProperty("cache.allow-null-values"));
         String cacheName = StringUtils.isBlank(environment.getProperty("cache.local.name"))
@@ -147,7 +147,7 @@ public class CacheConfig {
     @ConditionalOnProperty(name = "cache.central.class")
     public CacheImpl initCentralCacheImpl(Environment environment) throws ClassNotFoundException {
         String classNames = environment.getProperty("cache.central.class");
-        List<Cache> cacheList = getCacheList(classNames, false);
+        List<AbstractCache> cacheList = getCacheList(classNames, false);
         boolean allowNullValues = StringUtils.isBlank(environment.getProperty("cache.allow-null-values"))
                 ? CacheConstant.DEFAULT_CACHE_ALLOW_NULL_VALUES : Boolean.parseBoolean(environment.getProperty("cache.allow-null-values"));
         String cacheName = StringUtils.isBlank(environment.getProperty("cache.central.name"))
@@ -156,7 +156,10 @@ public class CacheConfig {
     }
 
     /**
-     * Set<AbstractLocalCache> 初始化 -> 集中并去重将所有本地缓存，用于同步清除
+     * localCaches 初始化
+     *
+     * 将混合模式和本地模式的所有本地缓存取出，并添加到一个Set集合中
+     * 当数据更新时，删除所有Set集合中本地缓存响应的数据
      *
      * @param cacheImpl
      * @param localCacheImpl
@@ -165,17 +168,16 @@ public class CacheConfig {
     @Bean(name = "localCaches")
     public Set<AbstractLocalCache> initLocalCaches(@Autowired(required = true) @Qualifier(value = "microboot.cache") CacheImpl cacheImpl,
                                                    @Autowired(required = false) @Qualifier(value = "microboot.local.cache") CacheImpl localCacheImpl) {
-        List<Cache> caches = cacheImpl.getCaches();
         Set<AbstractLocalCache> localCaches = Sets.newHashSet();
-        if (CollectionUtils.isNotEmpty(caches)) {
-            for (Cache cache : caches) {
+        if (cacheImpl != null && CollectionUtils.isNotEmpty(cacheImpl.getCaches())) {
+            for (AbstractCache cache : cacheImpl.getCaches()) {
                 if (cache instanceof AbstractLocalCache) {
                     localCaches.add((AbstractLocalCache) cache);
                 }
             }
         }
         if (localCacheImpl != null && CollectionUtils.isNotEmpty(localCacheImpl.getCaches())) {
-            for (Cache cache : localCacheImpl.getCaches()) {
+            for (AbstractCache cache : localCacheImpl.getCaches()) {
                 localCaches.add((AbstractLocalCache) cache);
             }
         }
@@ -421,15 +423,15 @@ public class CacheConfig {
         return new RedisImpl(cacheName, cacheExpire, isDynamic, redisTemplate);
     }
 
-    private List<Cache> getCacheList(String classNames) throws ClassNotFoundException {
+    private List<AbstractCache> getCacheList(String classNames) throws ClassNotFoundException {
         if (StringUtils.isBlank(classNames)) {
             throw new ClassNotFoundException();
         }
-        List<Cache> cacheList = Lists.newArrayList();
+        List<AbstractCache> cacheList = Lists.newArrayList();
         String[] classNamesArray = StringUtils.split(classNames, ",");
         for (String className : classNamesArray) {
-            Class<Cache> cacheClass = (Class<Cache>) Class.forName(className);
-            Cache cache = ApplicationContextHolder.getBean(cacheClass);
+            Class<AbstractCache> cacheClass = (Class<AbstractCache>) Class.forName(className);
+            AbstractCache cache = ApplicationContextHolder.getBean(cacheClass);
             if (cacheList.contains(cache)) {
                 continue;
             }
@@ -438,15 +440,15 @@ public class CacheConfig {
         return cacheList;
     }
 
-    private List<Cache> getCacheList(String classNames, boolean isLocal) throws ClassNotFoundException {
+    private List<AbstractCache> getCacheList(String classNames, boolean isLocal) throws ClassNotFoundException {
         if (StringUtils.isBlank(classNames)) {
             throw new ClassNotFoundException();
         }
-        List<Cache> cacheList = Lists.newArrayList();
+        List<AbstractCache> cacheList = Lists.newArrayList();
         String[] classNamesArray = StringUtils.split(classNames, ",");
         for (String className : classNamesArray) {
-            Class<Cache> cacheClass = (Class<Cache>) Class.forName(className);
-            Cache cache = ApplicationContextHolder.getBean(cacheClass);
+            Class<AbstractCache> cacheClass = (Class<AbstractCache>) Class.forName(className);
+            AbstractCache cache = ApplicationContextHolder.getBean(cacheClass);
             /*
                 isLocal = true时，表示筛选出local缓存，
                 isLocal = false时，表示筛选出非local缓存
@@ -465,7 +467,7 @@ public class CacheConfig {
         return cacheList;
     }
 
-    private CacheImpl getCache(boolean allowNullValues, String cacheName, List<Cache> cacheList) {
+    private CacheImpl getCache(boolean allowNullValues, String cacheName, List<AbstractCache> cacheList) {
         CacheImpl cacheImpl = new CacheImpl(allowNullValues);
         cacheImpl.setName(cacheName);
         cacheImpl.getCaches().addAll(cacheList);
