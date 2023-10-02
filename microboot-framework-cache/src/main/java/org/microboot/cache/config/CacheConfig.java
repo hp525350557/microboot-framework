@@ -387,10 +387,12 @@ public class CacheConfig {
     /**
      * RedisTemplate初始化
      *
+     * 这里的beanName必须用redisTemplate，使得SpringBoot官方的失效
+     *
      * @param redisConnectionFactory
      * @return
      */
-    @Bean(name = "org.springframework.data.redis.core.RedisTemplate")
+    @Bean(name = "redisTemplate")
     @ConditionalOnProperty(name = "cache.redis.using", havingValue = "true")
     public RedisTemplate<String, Object> initRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
