@@ -64,15 +64,6 @@
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
         </dependency>
-        <!--poi相关-->
-        <dependency>
-            <groupId>org.apache.poi</groupId>
-            <artifactId>poi</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.poi</groupId>
-            <artifactId>poi-ooxml</artifactId>
-        </dependency>
         <!--alibaba fastjson-->
         <dependency>
             <groupId>com.alibaba</groupId>

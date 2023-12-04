@@ -17,8 +17,8 @@ public class ThreadUtils {
 
     private static final Logger logger = LogManager.getLogger(ThreadUtils.class);
 
-    private static final int corePoolSize = 2;
-    private static final int maximumPoolSize = Runtime.getRuntime().availableProcessors();
+    private static final int corePoolSize = Runtime.getRuntime().availableProcessors();
+    private static final int maximumPoolSize = Runtime.getRuntime().availableProcessors() * 2;
     private static final long keepAliveTime = 60;
     private static final TimeUnit unit = TimeUnit.SECONDS;
 
