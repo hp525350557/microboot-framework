@@ -5,7 +5,7 @@ import com.alibaba.druid.pool.xa.DruidXADataSource;
 import com.google.common.collect.Maps;
 import freemarker.ext.beans.BeansWrapperBuilder;
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections4.MapUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.microboot.core.bean.ApplicationContextHolder;
 import org.microboot.core.constant.Constant;
