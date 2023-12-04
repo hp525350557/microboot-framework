@@ -1,7 +1,7 @@
 package org.microboot.data.processor;
 
 import com.alibaba.druid.pool.DruidDataSource;
-import org.apache.commons.collections4.MapUtils;
+import org.apache.commons.collections.MapUtils;
 import org.microboot.core.bean.ApplicationContextHolder;
 import org.microboot.core.constant.Constant;
 import org.springframework.beans.factory.InitializingBean;
