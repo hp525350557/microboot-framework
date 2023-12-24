@@ -25,7 +25,7 @@ public class CacheManagerImpl extends AbstractTransactionSupportingCacheManager 
     }
 
     public void setCache(String name, Cache cache) {
-        Assert.isTrue(!cacheMap.contains(name), name + " already exists");
+        Assert.isTrue(!cacheMap.containsKey(name), name + " already exists");
         cacheMap.put(name, cache);
     }
 }
