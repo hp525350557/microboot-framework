@@ -48,9 +48,13 @@ public class DaoConfig {
     }
 
     /**
-     * Primary注解用来确保SpringBoot中的默认DataSource不会通过自动装配的方式创建
-     * 由于microboot的数据源配置文件不是用spring.datasource.xxx的方式设置的
-     * 会导致自动装配创建DataSource时报错，所以必须创建一个master的DataSource的bean
+     * 初始化DataSource（主库）
+     *
+     * 说明：
+     * Primary注解避免SpringBoot中默认的DataSource通过自动装配的方式创建
+     * microboot的数据源配置文件不是用spring.datasource.xxx的方式设置的
+     * 这会导致自动装配创建DataSource时报错（找不到url等...）
+     * 因此需要手动创建一个master的DataSource覆盖掉默认的DataSource
      *
      * @param dataSourceFactory
      * @return
