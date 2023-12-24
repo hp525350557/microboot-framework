@@ -784,11 +784,11 @@ public abstract class AbstractBaseDaoWithOthers extends AbstractBaseDao {
     }
 
     /**
-     * @param dataBaseName（其他库）
+     * @param dataBaseName
      * @return
      * @throws Exception
      */
-    protected NamedParameterJdbcTemplate getNamedParameterJdbcTemplateWithOthers(String dataBaseName) throws Exception {
+    private NamedParameterJdbcTemplate getNamedParameterJdbcTemplateWithOthers(String dataBaseName) throws Exception {
         if (StringUtils.isBlank(dataBaseName)) {
             throw new IllegalArgumentException("dataBaseName must not be null");
         }

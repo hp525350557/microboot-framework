@@ -1,7 +1,6 @@
 package org.microboot.data.config;
 
 import com.alibaba.druid.pool.DruidDataSource;
-import com.alibaba.druid.pool.xa.DruidXADataSource;
 import com.google.common.collect.Maps;
 import freemarker.ext.beans.BeansWrapperBuilder;
 import org.apache.commons.collections.CollectionUtils;
@@ -61,18 +60,7 @@ public class DaoConfig {
     @Bean(name = Constant.MASTER_DATA_SOURCE)
     public DataSource initMasterDataSource(DataSourceFactory dataSourceFactory) {
         Map<String, Object> master = dataSourceFactory.getMaster();
-        DataSource dataSource = dataSourceFactory.createDataSource(master);
-        //如果开启了XA模式，则对dataSource进行XA处理
-        if (dataSource instanceof DruidXADataSource) {
-            Assert.isTrue(
-                    ApplicationContextHolder.getApplicationContext().containsLocalBean(XADataSourceFactoryFunc.class.getName()),
-                    XADataSourceFactoryFunc.class.getName().concat(" is missing")
-            );
-            dataSource = ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class)
-                    .rebuildDataSource(dataSource);
-            Assert.notNull(dataSource, "dataSource is null");
-        }
-        return dataSource;
+        return dataSourceFactory.createDataSource(master);
     }
 
     /**
@@ -101,18 +89,7 @@ public class DaoConfig {
             return ApplicationContextHolder.getBean(Constant.MASTER_DATA_SOURCE, DataSource.class);
         }
         //如果定义了从库，则主从分离，主数据库用来写，从数据库用来读
-        DataSource dataSource = dataSourceFactory.createDataSource(slaves);
-        //如果开启了XA模式，则对dataSource进行XA处理
-        if (dataSource instanceof DruidXADataSource) {
-            Assert.isTrue(
-                    ApplicationContextHolder.getApplicationContext().containsLocalBean(XADataSourceFactoryFunc.class.getName()),
-                    XADataSourceFactoryFunc.class.getName().concat(" is missing")
-            );
-            dataSource = ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class)
-                    .rebuildDataSource(dataSource);
-            Assert.isNull(dataSource, "dataSource is null");
-        }
-        return dataSource;
+        return dataSourceFactory.createDataSource(slaves);
     }
 
     /**
@@ -145,14 +122,7 @@ public class DaoConfig {
             DataSource dataSource = dataSourceFactory.createDataSource(other);
             String dataSourceName;
             //如果开启了XA模式，则对dataSource进行XA处理
-            if (dataSource instanceof DruidXADataSource) {
-                Assert.isTrue(
-                        ApplicationContextHolder.getApplicationContext().containsLocalBean(XADataSourceFactoryFunc.class.getName()),
-                        XADataSourceFactoryFunc.class.getName().concat(" is missing")
-                );
-                dataSource = ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class)
-                        .rebuildDataSource(dataSource);
-                Assert.notNull(dataSource, "dataSource is null");
+            if (dataSourceFactory.isEnableXA()) {
                 dataSourceName = ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class)
                         .getDataSourceName(dataSource);
                 Assert.notNull(dataSourceName, "dataSourceName is null");
@@ -192,8 +162,7 @@ public class DaoConfig {
      */
     @Bean
     public DataSourcePostProcessor initDataSourcePostProcessor(DataSourceFactory dataSourceFactory) {
-        boolean enableXA = dataSourceFactory.isEnableXA();
-        if (enableXA) return null;
+        if (dataSourceFactory.isEnableXA()) return null;
         return new DataSourcePostProcessor();
     }
 

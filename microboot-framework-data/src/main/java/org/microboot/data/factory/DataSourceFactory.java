@@ -7,7 +7,10 @@ import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.microboot.core.bean.ApplicationContextHolder;
+import org.microboot.data.func.XADataSourceFactoryFunc;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.util.Assert;
 
 import javax.sql.DataSource;
 import java.util.List;
@@ -74,6 +77,18 @@ public class DataSourceFactory {
 
         //初始化连接池配置
         druidDataSource.configFromPropety(properties);
+
+        //如果开启了XA模式，则对dataSource进行XA处理
+        if (enableXA) {
+            Assert.isTrue(
+                    ApplicationContextHolder.getApplicationContext().containsLocalBean(XADataSourceFactoryFunc.class.getName()),
+                    XADataSourceFactoryFunc.class.getName().concat(" is missing")
+            );
+            DataSource dataSource = ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class)
+                    .rebuildDataSource(druidDataSource);
+            Assert.notNull(dataSource, "dataSource is null");
+            return dataSource;
+        }
 
         return druidDataSource;
     }
