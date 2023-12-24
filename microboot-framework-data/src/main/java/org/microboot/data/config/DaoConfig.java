@@ -1,6 +1,5 @@
 package org.microboot.data.config;
 
-import com.alibaba.druid.pool.DruidDataSource;
 import com.google.common.collect.Maps;
 import freemarker.ext.beans.BeansWrapperBuilder;
 import org.apache.commons.collections.CollectionUtils;
@@ -10,7 +9,6 @@ import org.microboot.core.bean.ApplicationContextHolder;
 import org.microboot.core.constant.Constant;
 import org.microboot.data.basedao.BaseDao;
 import org.microboot.data.factory.DataSourceFactory;
-import org.microboot.data.func.XADataSourceFactoryFunc;
 import org.microboot.data.processor.DataSourcePostProcessor;
 import org.microboot.data.resolver.TemplateResolver;
 import org.springframework.boot.autoconfigure.freemarker.FreeMarkerProperties;
@@ -19,7 +17,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.util.Assert;
 
 import javax.sql.DataSource;
 import java.util.List;
@@ -51,7 +48,9 @@ public class DaoConfig {
     }
 
     /**
-     * 初始化DataSource（主库）
+     * Primary注解用来确保SpringBoot中的默认DataSource不会通过自动装配的方式创建
+     * 由于microboot的数据源配置文件不是用spring.datasource.xxx的方式设置的
+     * 会导致自动装配创建DataSource时报错，所以必须创建一个master的DataSource的bean
      *
      * @param dataSourceFactory
      * @return
@@ -75,63 +74,22 @@ public class DaoConfig {
     }
 
     /**
-     * 初始化DataSource（从库）
-     *
-     * @param dataSourceFactory
-     * @return
-     */
-    @Bean(value = Constant.SLAVES_DATA_SOURCE)
-    public DataSource initSlavesDataSource(DataSourceFactory dataSourceFactory) {
-        Map<String, DataSource> dataSourceMap = Maps.newHashMap();
-        Map<String, Object> slaves = dataSourceFactory.getSlaves();
-        //如果未定义从库，则主从用同一个数据源
-        if (MapUtils.isEmpty(slaves)) {
-            return ApplicationContextHolder.getBean(Constant.MASTER_DATA_SOURCE, DataSource.class);
-        }
-        //如果定义了从库，则主从分离，主数据库用来写，从数据库用来读
-        return dataSourceFactory.createDataSource(slaves);
-    }
-
-    /**
      * 初始化NamedParameterJdbcTemplate（从库）
      *
      * @return
      */
     @Bean(name = Constant.SLAVES_JDBC_TEMPLATE)
-    public NamedParameterJdbcTemplate initSlavesJdbcTemplate() {
-        DataSource dataSource = ApplicationContextHolder.getBean(Constant.SLAVES_DATA_SOURCE, DataSource.class);
+    public NamedParameterJdbcTemplate initSlavesJdbcTemplate(DataSourceFactory dataSourceFactory) {
+        DataSource dataSource;
+        Map<String, Object> slaves = dataSourceFactory.getSlaves();
+        if (MapUtils.isEmpty(slaves)) {
+            //如果未定义从库，则主从用同一个数据源
+            dataSource = ApplicationContextHolder.getBean(Constant.MASTER_DATA_SOURCE, DataSource.class);
+        } else {
+            //如果定义了从库，则主从分离，单独为从库创建一个数据源【主数据库用来写，从数据库用来读】
+            dataSource = dataSourceFactory.createDataSource(slaves);
+        }
         return new NamedParameterJdbcTemplate(dataSource);
-    }
-
-    /**
-     * 初始化Map<String, DataSource>（其他库）
-     *
-     * @param dataSourceFactory
-     * @return
-     */
-    @Bean(value = Constant.OTHERS_DATA_SOURCE)
-    public Map<String, DataSource> initOthersDataSource(DataSourceFactory dataSourceFactory) {
-        Map<String, DataSource> dataSourceMap = Maps.newHashMap();
-        List<Map<String, Object>> others = dataSourceFactory.getOthers();
-        //如果未定义其他库，则返回空的dataSourceMap
-        if (CollectionUtils.isEmpty(others)) {
-            return dataSourceMap;
-        }
-        //如果定义了其他库，则构建其他库连接池
-        for (Map<String, Object> other : others) {
-            DataSource dataSource = dataSourceFactory.createDataSource(other);
-            String dataSourceName;
-            //如果开启了XA模式，则对dataSource进行XA处理
-            if (dataSourceFactory.isEnableXA()) {
-                dataSourceName = ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class)
-                        .getDataSourceName(dataSource);
-                Assert.notNull(dataSourceName, "dataSourceName is null");
-            } else {
-                dataSourceName = ((DruidDataSource) dataSource).getName();
-            }
-            dataSourceMap.put(dataSourceName, dataSource);
-        }
-        return dataSourceMap;
     }
 
     /**
@@ -140,12 +98,21 @@ public class DaoConfig {
      * @return
      */
     @Bean(name = Constant.OTHERS_JDBC_TEMPLATE)
-    public Map<String, NamedParameterJdbcTemplate> initOthersJdbcTemplate() {
-        Map<String, DataSource> othersDataSourceMap = (Map<String, DataSource>) ApplicationContextHolder.getBean(Constant.OTHERS_DATA_SOURCE);
+    public Map<String, NamedParameterJdbcTemplate> initOthersJdbcTemplate(DataSourceFactory dataSourceFactory) {
         Map<String, NamedParameterJdbcTemplate> othersJdbcTemplateMap = Maps.newConcurrentMap();
-        for (String name : othersDataSourceMap.keySet()) {
-            othersJdbcTemplateMap.put(name, new NamedParameterJdbcTemplate(othersDataSourceMap.get(name)));
+
+        List<Map<String, Object>> others = dataSourceFactory.getOthers();
+        //如果未定义其他库，则返回空的othersJdbcTemplateMap
+        if (CollectionUtils.isEmpty(others)) {
+            return othersJdbcTemplateMap;
         }
+
+        for (Map<String, Object> other : others) {
+            DataSource dataSource = dataSourceFactory.createDataSource(other);
+            String dataSourceName = dataSourceFactory.getDataSourceName(dataSource);
+            othersJdbcTemplateMap.put(dataSourceName, new NamedParameterJdbcTemplate(dataSource));
+        }
+
         return othersJdbcTemplateMap;
     }
 

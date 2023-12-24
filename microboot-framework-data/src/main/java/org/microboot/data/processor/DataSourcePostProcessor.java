@@ -1,14 +1,11 @@
 package org.microboot.data.processor;
 
-import com.alibaba.druid.pool.DruidDataSource;
 import org.apache.commons.collections.MapUtils;
 import org.microboot.core.bean.ApplicationContextHolder;
 import org.microboot.core.constant.Constant;
+import org.microboot.data.utils.TransactionManagerUtils;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.support.BeanDefinitionBuilder;
-import org.springframework.beans.factory.support.DefaultListableBeanFactory;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import javax.sql.DataSource;
 import java.util.Map;
@@ -46,91 +43,29 @@ import java.util.Set;
  */
 public class DataSourcePostProcessor implements InitializingBean {
 
-    //将applicationContext转换为ConfigurableApplicationContext
-    private final ConfigurableApplicationContext configurableApplicationContext = (ConfigurableApplicationContext) ApplicationContextHolder.getApplicationContext();
-    //获取bean工厂并转换为DefaultListableBeanFactory
-    private final DefaultListableBeanFactory defaultListableBeanFactory = (DefaultListableBeanFactory) configurableApplicationContext.getBeanFactory();
-
-    private final String transactionManagerPrefix = "transactionManager";
-
     @Override
     public void afterPropertiesSet() throws Exception {
-        DataSource dataSource = ApplicationContextHolder.getBean(Constant.MASTER_DATA_SOURCE, DataSource.class);
-        //默认事务管理器
-        defaultTransactionManager(dataSource);
+        //主库事务
+        DataSource masterDataSource = ApplicationContextHolder.getBean(Constant.MASTER_DATA_SOURCE, DataSource.class);
+        TransactionManagerUtils.defaultTransactionManager(masterDataSource);//默认事务管理器
 
-        DataSource slavesDataSource = ApplicationContextHolder.getBean(Constant.SLAVES_DATA_SOURCE, DataSource.class);
-        //动态事务管理器
-        this.dynamicTransactionManager(slavesDataSource);
+        //从库事务
+        DataSource slavesDataSource = ApplicationContextHolder.getBean(Constant.SLAVES_JDBC_TEMPLATE, NamedParameterJdbcTemplate.class)
+                .getJdbcTemplate().getDataSource();
+        TransactionManagerUtils.dynamicTransactionManager(slavesDataSource);//动态事务管理器
 
-        Map<String, DataSource> othersDataSourceMap = (Map<String, DataSource>) ApplicationContextHolder.getBean(Constant.OTHERS_DATA_SOURCE);
-        //动态事务管理器
-        this.dynamicTransactionManager(othersDataSourceMap);
-    }
-
-    /**
-     * 默认事务管理器
-     *
-     * @param dataSource
-     */
-    private void defaultTransactionManager(DataSource dataSource) {
-        //通过BeanDefinitionBuilder创建bean定义
-        BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition(DataSourceTransactionManager.class);
-        //设置为默认事务管理器
-        beanDefinitionBuilder.setPrimary(true);
-        //设置bean属性
-        beanDefinitionBuilder.addPropertyValue("dataSource", dataSource);
-        //设置bean属性
-        beanDefinitionBuilder.addPropertyValue("nestedTransactionAllowed", true);
-        //注册bean
-        defaultListableBeanFactory.registerBeanDefinition(transactionManagerPrefix, beanDefinitionBuilder.getRawBeanDefinition());
-    }
-
-    /**
-     * 动态事务管理器
-     *
-     * @param dataSource
-     */
-    private void dynamicTransactionManager(DataSource dataSource) {
-        if (dataSource == null) {
+        //其他库事务
+        Map<String, NamedParameterJdbcTemplate> othersJdbcTemplateMap = ApplicationContextHolder.getBean(Constant.OTHERS_JDBC_TEMPLATE, Map.class);
+        if (MapUtils.isEmpty(othersJdbcTemplateMap)) {
             return;
         }
-        if (dataSource instanceof DruidDataSource) {
-            //通过BeanDefinitionBuilder创建bean定义
-            BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition(DataSourceTransactionManager.class);
-            //设置bean属性
-            beanDefinitionBuilder.addPropertyValue("dataSource", dataSource);
-            //注册bean
-            defaultListableBeanFactory.registerBeanDefinition(transactionManagerPrefix + '&' + ((DruidDataSource) dataSource).getName(), beanDefinitionBuilder.getRawBeanDefinition());
-        }
-    }
-
-    /**
-     * 动态事务管理器
-     *
-     * @param dataSourceMap
-     * @return
-     */
-    private void dynamicTransactionManager(Map<String, DataSource> dataSourceMap) {
-        if (MapUtils.isEmpty(dataSourceMap)) {
-            return;
-        }
-
-        Set<String> dataSourceNames = dataSourceMap.keySet();
-
-        for (String dataSourceName : dataSourceNames) {
-            DataSource dataSource = dataSourceMap.get(dataSourceName);
-            if (dataSource == null) {
+        Set<String> othersJdbcTemplateKeys = othersJdbcTemplateMap.keySet();
+        for (String othersJdbcTemplateKey : othersJdbcTemplateKeys) {
+            NamedParameterJdbcTemplate namedParameterJdbcTemplate = othersJdbcTemplateMap.get(othersJdbcTemplateKey);
+            if (namedParameterJdbcTemplate == null) {
                 continue;
             }
-            if (dataSource instanceof DruidDataSource) {
-                //通过BeanDefinitionBuilder创建bean定义
-                BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition(DataSourceTransactionManager.class);
-                //设置bean属性
-                beanDefinitionBuilder.addPropertyValue("dataSource", dataSource);
-                //注册bean
-                defaultListableBeanFactory.registerBeanDefinition(transactionManagerPrefix + '&' + dataSourceName, beanDefinitionBuilder.getRawBeanDefinition());
-            }
+            TransactionManagerUtils.dynamicTransactionManager(namedParameterJdbcTemplate.getJdbcTemplate().getDataSource());//动态事务管理器
         }
     }
 }

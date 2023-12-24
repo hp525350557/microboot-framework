@@ -1,6 +1,8 @@
 package org.microboot.data.basedao;
 
+import com.alibaba.druid.pool.DruidDataSource;
 import com.google.common.collect.Maps;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -8,11 +10,14 @@ import org.microboot.core.bean.ApplicationContextHolder;
 import org.microboot.core.constant.Constant;
 import org.microboot.core.entity.Page;
 import org.microboot.core.utils.ConvertUtils;
+import org.microboot.data.factory.DataSourceFactory;
+import org.microboot.data.utils.TransactionManagerUtils;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 
+import javax.sql.DataSource;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
@@ -784,6 +789,32 @@ public abstract class AbstractBaseDaoWithOthers extends AbstractBaseDao {
     }
 
     /**
+     * @param parameters
+     * @throws Exception
+     */
+    public void createDataSourceWithOthers(Map<String, Object> parameters) throws Exception {
+        //如果parameters为空则不创建数据源
+        if (MapUtils.isEmpty(parameters)) {
+            return;
+        }
+
+        //创建数据源
+        DataSourceFactory dataSourceFactory = ApplicationContextHolder.getApplicationContext().getBean(DataSourceFactory.class);
+        DataSource dataSource = dataSourceFactory.createDataSource(parameters);
+        String dataSourceName = dataSourceFactory.getDataSourceName(dataSource);
+
+        //创建NamedParameterJdbcTemplate对象
+        Map<String, NamedParameterJdbcTemplate> othersJdbcTemplateMap = ApplicationContextHolder.getBean(Constant.OTHERS_JDBC_TEMPLATE, Map.class);
+        othersJdbcTemplateMap.put(dataSourceName, new NamedParameterJdbcTemplate(dataSource));
+
+        //如果是普通数据源，创建普通事务，如果是XA数据源，则在创建数据源时构建XA事务
+        if (dataSource instanceof DruidDataSource) {
+            //动态事务管理器
+            TransactionManagerUtils.dynamicTransactionManager(dataSource);
+        }
+    }
+
+    /**
      * @param dataBaseName
      * @return
      * @throws Exception
@@ -792,8 +823,8 @@ public abstract class AbstractBaseDaoWithOthers extends AbstractBaseDao {
         if (StringUtils.isBlank(dataBaseName)) {
             throw new IllegalArgumentException("dataBaseName must not be null");
         }
-        Map<String, NamedParameterJdbcTemplate> namedParameterJdbcTemplateMap = (Map<String, NamedParameterJdbcTemplate>) ApplicationContextHolder.getBean(Constant.OTHERS_JDBC_TEMPLATE);
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate = namedParameterJdbcTemplateMap.getOrDefault(dataBaseName, null);
+        Map<String, NamedParameterJdbcTemplate> othersJdbcTemplateMap = ApplicationContextHolder.getBean(Constant.OTHERS_JDBC_TEMPLATE, Map.class);
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = othersJdbcTemplateMap.getOrDefault(dataBaseName, null);
         if (namedParameterJdbcTemplate == null) {
             throw new SQLException("no available connections were found");
         }

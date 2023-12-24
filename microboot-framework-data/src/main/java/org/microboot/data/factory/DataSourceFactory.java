@@ -92,4 +92,27 @@ public class DataSourceFactory {
 
         return druidDataSource;
     }
+
+    /**
+     * 获取数据源名称
+     *
+     * @param dataSource
+     * @return
+     */
+    public String getDataSourceName(DataSource dataSource) {
+        String dataSourceName;
+        //如果开启了XA模式，则用XA模式获取数据源名称
+        if (enableXA) {
+            Assert.isTrue(
+                    ApplicationContextHolder.getApplicationContext().containsLocalBean(XADataSourceFactoryFunc.class.getName()),
+                    XADataSourceFactoryFunc.class.getName().concat(" is missing")
+            );
+            dataSourceName = ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class)
+                    .getDataSourceName(dataSource);
+        } else {
+            dataSourceName = ((DruidDataSource) dataSource).getName();
+        }
+        Assert.isTrue(StringUtils.isNotBlank(dataSourceName), "dataSourceName is null");
+        return dataSourceName;
+    }
 }

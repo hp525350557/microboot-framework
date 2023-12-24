@@ -18,9 +18,7 @@ public class Constant {
 
     public static final String MASTER_DATA_SOURCE = "MASTER_DATA_SOURCE";
     public static final String MASTER_JDBC_TEMPLATE = "MASTER_JDBC_TEMPLATE";
-    public static final String SLAVES_DATA_SOURCE = "SLAVES_DATA_SOURCE";
     public static final String SLAVES_JDBC_TEMPLATE = "SLAVES_JDBC_TEMPLATE";
-    public static final String OTHERS_DATA_SOURCE = "OTHERS_DATA_SOURCE";
     public static final String OTHERS_JDBC_TEMPLATE = "OTHERS_JDBC_TEMPLATE";
     public static final String FREEMARKER_CONFIGURATION = "freemarker.template.Configuration";
 
