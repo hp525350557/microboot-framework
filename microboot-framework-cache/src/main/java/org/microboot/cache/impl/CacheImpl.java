@@ -198,7 +198,7 @@ public class CacheImpl extends AbstractValueAdaptingCache {
      * 通过@Cacheable的sync参数来控制是否需要加锁
      * 其他的get或lookup方法则默认是线程不安全的
      *
-     * CacheImpl采用的是类似伴生锁的概念，以缓存key作为锁对象。不同key并行，相同key互斥
+     * CacheImpl采用的是类似ConcurrentHashMap分段锁的概念，以缓存key作为锁对象，不同key并行，相同key互斥
      * 【内置只实现了单进程内的锁，如果是分布式系统，请自己实现SyncFunc接口，然后将实现类的bean注入spring即可】
      *
      * @param key
