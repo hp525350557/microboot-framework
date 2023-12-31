@@ -3,7 +3,6 @@ package org.microboot.cache.config;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import net.sf.ehcache.Ehcache;
 import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.spring.MemcachedClientFactoryBean;
 import org.apache.activemq.command.ActiveMQTopic;
@@ -285,67 +284,60 @@ public class CacheConfig {
 
     /************************************* Ehcache相关初始化 *****************************************/
     /**
-     * EhCacheManagerFactoryBean初始化
-     *
-     * @param environment
-     * @return
-     * @throws Exception
-     */
-    @Bean(name = "org.springframework.cache.ehcache.EhCacheManagerFactoryBean")
-    @ConditionalOnProperty(name = "cache.ehcache.using", havingValue = "true")
-    public EhCacheManagerFactoryBean initEhCacheManagerFactoryBean(Environment environment) throws Exception {
-        String ehcacheXML = StringUtils.isBlank(environment.getProperty("cache.ehcache.xml"))
-                ? CacheConstant.DEFAULT_EHCACHE_XML : environment.getProperty("cache.ehcache.xml");
-        EhCacheManagerFactoryBean ehCacheManagerFactoryBean = new EhCacheManagerFactoryBean();
-        ehCacheManagerFactoryBean.setConfigLocation(new UrlResource(ehcacheXML));
-        ehCacheManagerFactoryBean.setShared(true);
-        return ehCacheManagerFactoryBean;
-    }
-
-    /**
      * EhCacheFactoryBean初始化
      *
-     * @param ehCacheManagerFactoryBean
      * @param environment
      * @return
      */
     @Bean(name = "org.springframework.cache.ehcache.EhCacheFactoryBean")
     @ConditionalOnProperty(name = "cache.ehcache.using", havingValue = "true")
-    public EhCacheFactoryBean initEhCacheFactoryBean(EhCacheManagerFactoryBean ehCacheManagerFactoryBean, Environment environment) {
+    public EhCacheFactoryBean initEhCacheFactoryBean(Environment environment) throws Exception {
+        //创建EhCacheManagerFactoryBean
+        String ehcacheXML = StringUtils.isBlank(environment.getProperty("cache.ehcache.xml"))
+                ? CacheConstant.DEFAULT_EHCACHE_XML : environment.getProperty("cache.ehcache.xml");
+        String ehcacheManagerName = StringUtils.isBlank(environment.getProperty("cache.ehcache.manager_name"))
+                ? CacheConstant.DEFAULT_EHCACHE_MANAGER_NAME : environment.getProperty("cache.ehcache.manager_name");
+        boolean ehcacheShared = StringUtils.isBlank(environment.getProperty("cache.ehcache.shared"))
+                ? CacheConstant.DEFAULT_EHCACHE_SHARED : Boolean.parseBoolean(environment.getProperty("cache.ehcache.shared"));
+        boolean ehcacheAcceptExisting = StringUtils.isBlank(environment.getProperty("cache.ehcache.accept_existing"))
+                ? CacheConstant.DEFAULT_EHCACHE_ACCEPT_EXISTING : Boolean.parseBoolean(environment.getProperty("cache.ehcache.accept_existing"));
+        EhCacheManagerFactoryBean ehCacheManagerFactoryBean = new EhCacheManagerFactoryBean();
+        ehCacheManagerFactoryBean.setConfigLocation(new UrlResource(ehcacheXML));
+        ehCacheManagerFactoryBean.setCacheManagerName(ehcacheManagerName);
+        ehCacheManagerFactoryBean.setShared(ehcacheShared);
+        ehCacheManagerFactoryBean.setAcceptExisting(ehcacheAcceptExisting);
+
+        //创建EhCacheFactoryBean
         String ehcacheName = StringUtils.isBlank(environment.getProperty("cache.ehcache.name"))
                 ? CacheConstant.DEFAULT_EHCACHE_NAME : environment.getProperty("cache.ehcache.name");
+        boolean ehcacheDisabled = StringUtils.isBlank(environment.getProperty("cache.ehcache.disabled"))
+                ? CacheConstant.DEFAULT_EHCACHE_DISABLED : Boolean.parseBoolean(environment.getProperty("cache.ehcache.disabled"));
+        boolean ehcacheBlocking = StringUtils.isBlank(environment.getProperty("cache.ehcache.blocking"))
+                ? CacheConstant.DEFAULT_EHCACHE_BLOCKING : Boolean.parseBoolean(environment.getProperty("cache.ehcache.blocking"));
         EhCacheFactoryBean ehCacheFactoryBean = new EhCacheFactoryBean();
         ehCacheFactoryBean.setCacheManager(ehCacheManagerFactoryBean.getObject());
         ehCacheFactoryBean.setName(ehcacheName);
+        ehCacheFactoryBean.setDisabled(ehcacheDisabled);
+        ehCacheFactoryBean.setBlocking(ehcacheBlocking);
         return ehCacheFactoryBean;
-    }
-
-    /**
-     * Ehcache初始化
-     *
-     * @param ehCacheFactoryBean
-     * @return
-     * @throws Exception
-     */
-    @Bean(name = "net.sf.ehcache.Ehcache")
-    @ConditionalOnProperty(name = "cache.ehcache.using", havingValue = "true")
-    public Ehcache initEhcache(EhCacheFactoryBean ehCacheFactoryBean) throws Exception {
-        return ehCacheFactoryBean.getObject();
     }
 
     /**
      * EhcacheImpl初始化
      *
-     * @param ehcache
+     * 注意：不能让Ehcache和EhCacheFactoryBean同时注册到Spring容器中，不然会报错
+     * 因此这里只能注入EhCacheFactoryBean
+     *
+     * @param ehCacheFactoryBean
      * @param environment
      * @return
      */
     @Bean(name = "org.microboot.cache.impl.ehcache.EhcacheImpl")
     @ConditionalOnProperty(name = "cache.ehcache.using", havingValue = "true")
-    public EhcacheImpl initEhcacheImpl(Ehcache ehcache, Environment environment) {
+    public EhcacheImpl initEhcacheImpl(EhCacheFactoryBean ehCacheFactoryBean, Environment environment) {
         String ehcacheName = StringUtils.isBlank(environment.getProperty("cache.ehcache.name"))
                 ? CacheConstant.DEFAULT_EHCACHE_NAME : environment.getProperty("cache.ehcache.name");
-        return new EhcacheImpl(ehcacheName, ehcache);
+        return new EhcacheImpl(ehcacheName, ehCacheFactoryBean.getObject());
     }
 
     /*************************************Memcache相关初始化*****************************************/

@@ -18,7 +18,12 @@ public class CacheConstant {
     public static final boolean DEFAULT_CACHE_ALLOW_NULL_VALUES = false;
     //ehcache
     public static final String DEFAULT_EHCACHE_NAME = "microboot-ehcache";
+    public static final String DEFAULT_EHCACHE_MANAGER_NAME = "microboot-manager-ehcache";
     public static final String DEFAULT_EHCACHE_XML = "ehcache/ehcache.xml";
+    public static final boolean DEFAULT_EHCACHE_SHARED = false;
+    public static final boolean DEFAULT_EHCACHE_ACCEPT_EXISTING = false;
+    public static final boolean DEFAULT_EHCACHE_DISABLED = false;
+    public static final boolean DEFAULT_EHCACHE_BLOCKING = false;
     //caffeine
     public static final String DEFAULT_CAFFEINE_NAME = "microboot-caffeine";
     public static final boolean DEFAULT_CAFFEINE_ALLOW_NULL_VALUES = false;
