@@ -377,6 +377,28 @@ public class CacheConfig {
 
     /************************************* Redis相关初始化 *****************************************/
     /**
+     * 初始化RedisSerializer-keySerializer
+     *
+     * @return
+     */
+    @ConditionalOnMissingBean(name = "keySerializer")
+    @Bean(name = "keySerializer")
+    public RedisSerializer initKeySerializer() {
+        return new StringRedisSerializer();
+    }
+
+    /**
+     * 初始化RedisSerializer-valueSerializer
+     *
+     * @return
+     */
+    @ConditionalOnMissingBean(name = "valueSerializer")
+    @Bean(name = "valueSerializer")
+    public RedisSerializer initValueSerializer() {
+        return new JdkSerializationRedisSerializer();
+    }
+
+    /**
      * RedisTemplate初始化
      *
      * 这里的beanName必须用redisTemplate，使得SpringBoot官方的失效
@@ -386,15 +408,15 @@ public class CacheConfig {
      */
     @Bean(name = "redisTemplate")
     @ConditionalOnProperty(name = "cache.redis.using", havingValue = "true")
-    public RedisTemplate<String, Object> initRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
+    public RedisTemplate<String, Object> initRedisTemplate(RedisConnectionFactory redisConnectionFactory,
+                                                           @Autowired @Qualifier(value = "keySerializer") RedisSerializer keySerializer,
+                                                           @Autowired @Qualifier(value = "valueSerializer") RedisSerializer valueSerializer) {
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory);
         //key序列化
-        RedisSerializer<String> redisSerializer = new StringRedisSerializer();
-        redisTemplate.setKeySerializer(redisSerializer);
+        redisTemplate.setKeySerializer(keySerializer);
         //value序列化
-        JdkSerializationRedisSerializer jdkSerializationRedisSerializer = new JdkSerializationRedisSerializer();
-        redisTemplate.setValueSerializer(jdkSerializationRedisSerializer);
+        redisTemplate.setValueSerializer(valueSerializer);
         return redisTemplate;
     }
 
