@@ -430,12 +430,12 @@ public class CacheConfig {
      */
     @Bean(name = "redisTemplate")
     @ConditionalOnProperty(name = "cache.redis.using", havingValue = "true")
-    public RedisTemplate<String, Object> initRedisTemplate(RedisConnectionFactory redisConnectionFactory,
-                                                           @Autowired @Qualifier(value = "keySerializer") RedisSerializer keySerializer,
-                                                           @Autowired @Qualifier(value = "valueSerializer") RedisSerializer valueSerializer,
-                                                           @Autowired @Qualifier(value = "hashKeySerializer") RedisSerializer hashKeySerializer,
-                                                           @Autowired @Qualifier(value = "hashValueSerializer") RedisSerializer hashValueSerializer) {
-        RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
+    public RedisTemplate initRedisTemplate(RedisConnectionFactory redisConnectionFactory,
+                                           @Autowired @Qualifier(value = "keySerializer") RedisSerializer keySerializer,
+                                           @Autowired @Qualifier(value = "valueSerializer") RedisSerializer valueSerializer,
+                                           @Autowired @Qualifier(value = "hashKeySerializer") RedisSerializer hashKeySerializer,
+                                           @Autowired @Qualifier(value = "hashValueSerializer") RedisSerializer hashValueSerializer) {
+        RedisTemplate redisTemplate = new RedisTemplate();
         redisTemplate.setConnectionFactory(redisConnectionFactory);
         //key序列化
         redisTemplate.setKeySerializer(keySerializer);
@@ -455,7 +455,7 @@ public class CacheConfig {
      */
     @Bean(name = "org.microboot.cache.impl.redis.RedisImpl")
     @ConditionalOnProperty(name = "cache.redis.using", havingValue = "true")
-    public RedisImpl initRedisCacheImpl(RedisTemplate<String, Object> redisTemplate, Environment environment) {
+    public RedisImpl initRedisCacheImpl(RedisTemplate redisTemplate, Environment environment) {
         int cacheExpire = StringUtils.isBlank(environment.getProperty("cache.redis.name"))
                 ? CacheConstant.DEFAULT_CACHE_EXPIRE : Integer.parseInt(environment.getProperty("cache.redis.expire"));
         boolean isDynamic = StringUtils.isBlank(environment.getProperty("cache.redis.isDynamic"))
