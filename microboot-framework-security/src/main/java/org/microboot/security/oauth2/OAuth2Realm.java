@@ -34,13 +34,28 @@ public class OAuth2Realm extends AuthorizingRealm {
     @Override
     protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principals) {
         String principal = principals.getPrimaryPrincipal().toString();
-        Set<String> permissionSet;
+        Set<String> roleSet = null;
+        Set<String> permissionSet = null;
         try {
-            permissionSet = (Set<String>) ApplicationContextHolder.getBean(Constant.SECURITY_GET_AUTHORIZATION_INFO_FUNC, Func1.class).func(principal);
+            boolean notMissing = ApplicationContextHolder.getApplicationContext().containsLocalBean(Constant.SECURITY_GET_AUTHORIZATION_INFO_ROLE_FUNC);
+            if (notMissing) {
+                roleSet = (Set<String>) ApplicationContextHolder.getBean(Constant.SECURITY_GET_AUTHORIZATION_INFO_ROLE_FUNC, Func1.class).func(principal);
+            }
+        } catch (Exception e) {
+            throw new AuthorizationException(Constant.ERROR_1);
+        }
+        try {
+            boolean notMissing = ApplicationContextHolder.getApplicationContext().containsLocalBean(Constant.SECURITY_GET_AUTHORIZATION_INFO_PERMISSION_FUNC);
+            if (notMissing) {
+                permissionSet = (Set<String>) ApplicationContextHolder.getBean(Constant.SECURITY_GET_AUTHORIZATION_INFO_PERMISSION_FUNC, Func1.class).func(principal);
+            }
         } catch (Exception e) {
             throw new AuthorizationException(Constant.ERROR_1);
         }
         SimpleAuthorizationInfo simpleAuthorizationInfo = new SimpleAuthorizationInfo();
+        if (CollectionUtils.isNotEmpty(roleSet)) {
+            simpleAuthorizationInfo.setRoles(roleSet);
+        }
         if (CollectionUtils.isNotEmpty(permissionSet)) {
             simpleAuthorizationInfo.setStringPermissions(permissionSet);
         }
