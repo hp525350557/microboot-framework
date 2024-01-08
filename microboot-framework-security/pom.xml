@@ -11,22 +11,4 @@
 
     <artifactId>microboot-framework-security</artifactId>
 
-    <dependencies>
-        <dependency>
-            <groupId>org.microbootframework</groupId>
-            <artifactId>microboot-framework-core</artifactId>
-            <version>master-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>org.microbootframework</groupId>
-            <artifactId>microboot-framework-web</artifactId>
-            <version>master-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.shiro</groupId>
-            <artifactId>shiro-spring</artifactId>
-            <version>${shiro-spring.version}</version>
-        </dependency>
-    </dependencies>
-
 </project>

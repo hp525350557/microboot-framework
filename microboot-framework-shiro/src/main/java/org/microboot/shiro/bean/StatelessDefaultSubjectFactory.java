@@ -1,4 +1,4 @@
-package org.microboot.security.bean;
+package org.microboot.shiro.bean;
 
 import org.apache.shiro.subject.Subject;
 import org.apache.shiro.subject.SubjectContext;

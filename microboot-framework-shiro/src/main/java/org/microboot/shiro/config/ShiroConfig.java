@@ -1,4 +1,4 @@
-package org.microboot.security.config;
+package org.microboot.shiro.config;
 
 import com.google.common.collect.Maps;
 import org.apache.commons.lang3.StringUtils;
@@ -12,9 +12,9 @@ import org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSource
 import org.apache.shiro.spring.web.ShiroFilterFactoryBean;
 import org.apache.shiro.web.mgt.DefaultWebSecurityManager;
 import org.microboot.core.constant.Constant;
-import org.microboot.security.bean.StatelessDefaultSubjectFactory;
-import org.microboot.security.oauth2.OAuth2Filter;
-import org.microboot.security.oauth2.OAuth2Realm;
+import org.microboot.shiro.bean.StatelessDefaultSubjectFactory;
+import org.microboot.shiro.oauth2.OAuth2Filter;
+import org.microboot.shiro.oauth2.OAuth2Realm;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
@@ -29,7 +29,7 @@ import java.util.Map;
  */
 @Configuration
 @DependsOn(Constant.APPLICATION_CONTEXT_HOLDER)
-public class SecurityConfig {
+public class ShiroConfig {
 
     private final boolean SESSION_VALIDATION_SCHEDULER_ENABLED = false;
     private final boolean SESSION_CREATION_ENABLED = false;

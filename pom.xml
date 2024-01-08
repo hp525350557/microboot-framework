@@ -211,6 +211,7 @@
         <module>microboot-framework-data-xa</module>
         <module>microboot-framework-logging</module>
         <module>microboot-framework-security</module>
+        <module>microboot-framework-shiro</module>
         <module>microboot-framework-validator</module>
         <module>microboot-framework-view</module>
         <module>microboot-framework-web</module>

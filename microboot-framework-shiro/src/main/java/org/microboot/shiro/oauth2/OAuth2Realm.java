@@ -1,4 +1,4 @@
-package org.microboot.security.oauth2;
+package org.microboot.shiro.oauth2;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.shiro.authc.AuthenticationException;
