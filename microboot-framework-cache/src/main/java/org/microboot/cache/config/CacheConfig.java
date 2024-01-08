@@ -399,9 +399,31 @@ public class CacheConfig {
     }
 
     /**
+     * 初始化RedisSerializer-hashKeySerializer
+     *
+     * @return
+     */
+    @ConditionalOnMissingBean(name = "hashKeySerializer")
+    @Bean(name = "hashKeySerializer")
+    public RedisSerializer initHashKeySerializer() {
+        return new StringRedisSerializer();
+    }
+
+    /**
+     * 初始化RedisSerializer-hashValueSerializer
+     *
+     * @return
+     */
+    @ConditionalOnMissingBean(name = "hashValueSerializer")
+    @Bean(name = "hashValueSerializer")
+    public RedisSerializer initHashValueSerializer() {
+        return new JdkSerializationRedisSerializer();
+    }
+
+    /**
      * RedisTemplate初始化
      *
-     * 这里的beanName必须用redisTemplate，使得SpringBoot官方的失效
+     * beanName使用redisTemplate，使得SpringBoot官方的失效
      *
      * @param redisConnectionFactory
      * @return
@@ -410,13 +432,17 @@ public class CacheConfig {
     @ConditionalOnProperty(name = "cache.redis.using", havingValue = "true")
     public RedisTemplate<String, Object> initRedisTemplate(RedisConnectionFactory redisConnectionFactory,
                                                            @Autowired @Qualifier(value = "keySerializer") RedisSerializer keySerializer,
-                                                           @Autowired @Qualifier(value = "valueSerializer") RedisSerializer valueSerializer) {
+                                                           @Autowired @Qualifier(value = "valueSerializer") RedisSerializer valueSerializer,
+                                                           @Autowired @Qualifier(value = "hashKeySerializer") RedisSerializer hashKeySerializer,
+                                                           @Autowired @Qualifier(value = "hashValueSerializer") RedisSerializer hashValueSerializer) {
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory);
         //key序列化
         redisTemplate.setKeySerializer(keySerializer);
+        redisTemplate.setHashKeySerializer(hashKeySerializer);
         //value序列化
         redisTemplate.setValueSerializer(valueSerializer);
+        redisTemplate.setHashValueSerializer(hashValueSerializer);
         return redisTemplate;
     }
 
