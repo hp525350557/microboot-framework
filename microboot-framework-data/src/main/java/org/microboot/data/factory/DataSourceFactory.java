@@ -81,7 +81,7 @@ public class DataSourceFactory {
         //如果开启了XA模式，则对dataSource进行XA处理
         if (enableXA) {
             Assert.isTrue(
-                    ApplicationContextHolder.getApplicationContext().containsLocalBean(XADataSourceFactoryFunc.class.getName()),
+                    ApplicationContextHolder.getApplicationContext().containsBean(XADataSourceFactoryFunc.class.getName()),
                     XADataSourceFactoryFunc.class.getName().concat(" is missing")
             );
             DataSource dataSource = ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class)
@@ -104,7 +104,7 @@ public class DataSourceFactory {
         //如果开启了XA模式，则用XA模式获取数据源名称
         if (enableXA) {
             Assert.isTrue(
-                    ApplicationContextHolder.getApplicationContext().containsLocalBean(XADataSourceFactoryFunc.class.getName()),
+                    ApplicationContextHolder.getApplicationContext().containsBean(XADataSourceFactoryFunc.class.getName()),
                     XADataSourceFactoryFunc.class.getName().concat(" is missing")
             );
             dataSourceName = ApplicationContextHolder.getBean(XADataSourceFactoryFunc.class.getName(), XADataSourceFactoryFunc.class)

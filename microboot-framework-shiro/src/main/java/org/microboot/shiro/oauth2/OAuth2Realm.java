@@ -37,7 +37,7 @@ public class OAuth2Realm extends AuthorizingRealm {
         Set<String> roleSet = null;
         Set<String> permissionSet = null;
         try {
-            boolean notMissing = ApplicationContextHolder.getApplicationContext().containsLocalBean(Constant.SECURITY_GET_AUTHORIZATION_INFO_ROLE_FUNC);
+            boolean notMissing = ApplicationContextHolder.getApplicationContext().containsBean(Constant.SECURITY_GET_AUTHORIZATION_INFO_ROLE_FUNC);
             if (notMissing) {
                 roleSet = (Set<String>) ApplicationContextHolder.getBean(Constant.SECURITY_GET_AUTHORIZATION_INFO_ROLE_FUNC, Func1.class).func(principal);
             }
@@ -45,7 +45,7 @@ public class OAuth2Realm extends AuthorizingRealm {
             throw new AuthorizationException(Constant.ERROR_1);
         }
         try {
-            boolean notMissing = ApplicationContextHolder.getApplicationContext().containsLocalBean(Constant.SECURITY_GET_AUTHORIZATION_INFO_PERMISSION_FUNC);
+            boolean notMissing = ApplicationContextHolder.getApplicationContext().containsBean(Constant.SECURITY_GET_AUTHORIZATION_INFO_PERMISSION_FUNC);
             if (notMissing) {
                 permissionSet = (Set<String>) ApplicationContextHolder.getBean(Constant.SECURITY_GET_AUTHORIZATION_INFO_PERMISSION_FUNC, Func1.class).func(principal);
             }

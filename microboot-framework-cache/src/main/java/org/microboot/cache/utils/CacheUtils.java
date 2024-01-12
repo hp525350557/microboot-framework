@@ -12,7 +12,7 @@ import org.microboot.core.utils.CryptoUtils;
 public class CacheUtils {
 
     public static void clear(String uniqueId, Object key, Object value) {
-        boolean notMissing = ApplicationContextHolder.getApplicationContext().containsLocalBean(MQProviderFunc.class.getName());
+        boolean notMissing = ApplicationContextHolder.getApplicationContext().containsBean(MQProviderFunc.class.getName());
         if (!notMissing) {
             return;
         }
