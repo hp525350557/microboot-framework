@@ -1,2 +1,2 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-org.microboot.data.xa.config.DaoConfig
+org.microboot.data.xa.config.XADataConfig

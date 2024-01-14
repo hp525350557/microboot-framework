@@ -13,7 +13,7 @@ import org.springframework.context.annotation.DependsOn;
  */
 @Configuration
 @DependsOn(Constant.APPLICATION_CONTEXT_HOLDER)
-public class DaoConfig {
+public class XADataConfig {
 
     /**
      * 初始化XADataSourceFactoryBean

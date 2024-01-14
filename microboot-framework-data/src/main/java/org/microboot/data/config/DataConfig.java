@@ -35,7 +35,7 @@ import java.util.Properties;
  */
 @Configuration
 @DependsOn(Constant.APPLICATION_CONTEXT_HOLDER)
-public class DaoConfig {
+public class DataConfig {
 
     /**
      * 初始化DataSourceFactory
