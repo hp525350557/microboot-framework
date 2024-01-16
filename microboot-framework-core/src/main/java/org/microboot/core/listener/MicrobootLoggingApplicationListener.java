@@ -4,10 +4,8 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.microboot.core.utils.ProcessUtil;
 import org.slf4j.MDC;
-import org.springframework.boot.SpringApplication;
 import org.springframework.boot.context.config.ConfigFileApplicationListener;
 import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEvent;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationEvent;
 import org.springframework.context.event.GenericApplicationListener;
 import org.springframework.core.ResolvableType;
@@ -79,14 +77,14 @@ public class MicrobootLoggingApplicationListener implements GenericApplicationLi
                 }
                 Map<String, Object> map = (Map<String, Object>) source;
                 for (String key : map.keySet()) {
-                    if (!StringUtils.contains(key, "custom.logging")) {
+                    if (!StringUtils.contains(key, "microboot.logging")) {
                         continue;
                     }
                     String value = MapUtils.getString(map, key);
                     if (StringUtils.isBlank(value)) {
                         continue;
                     }
-                    String newKey = StringUtils.replace(key, "custom.logging.", "");
+                    String newKey = StringUtils.replace(key, "microboot.logging.", "");
                     if (StringUtils.containsIgnoreCase(value, "${pid}")) {
                         value = StringUtils.replace(value, "${pid}", ProcessUtil.getProcessId());
                     }
