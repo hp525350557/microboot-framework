@@ -1,5 +1,6 @@
 package org.microboot.web.config;
 
+import org.apache.commons.lang3.StringUtils;
 import org.microboot.core.constant.Constant;
 import org.microboot.web.filter.WebFilter;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -7,6 +8,7 @@ import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
+import org.springframework.core.env.Environment;
 import org.springframework.web.servlet.DispatcherServlet;
 import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -39,9 +41,11 @@ public class WebConfig implements WebMvcConfigurer {
      * @return
      */
     @Bean(name = "org.springframework.boot.web.servlet.ServletRegistrationBean")
-    public ServletRegistrationBean<DispatcherServlet> initServletRegistrationBean(DispatcherServlet dispatcherServlet) {
+    public ServletRegistrationBean<DispatcherServlet> initServletRegistrationBean(Environment environment, DispatcherServlet dispatcherServlet) {
+        String urlMappings = environment.getProperty("microboot.web.url-mappings", "/,*.html,*.do");
+        String[] urlMappingArray = StringUtils.split(urlMappings, ",");
         ServletRegistrationBean<DispatcherServlet> servletServletRegistrationBean = new ServletRegistrationBean<>(dispatcherServlet);
-        servletServletRegistrationBean.addUrlMappings("/", "*.html");
+        servletServletRegistrationBean.addUrlMappings(urlMappingArray);
         return servletServletRegistrationBean;
     }
 

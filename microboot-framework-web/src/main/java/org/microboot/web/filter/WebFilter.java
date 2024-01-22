@@ -16,8 +16,21 @@ import java.nio.charset.StandardCharsets;
 /**
  * @author 胡鹏
  * <p>
- * 之所以将WebFilter和ConsumerFilter逻辑分开，是站在框架层面不应该写死重定向逻辑
- * 重定向逻辑应该是作为补充逻辑，可有可无，对于前后端分离的项目，就不应该由服务端进行页面重定向工作
+ *
+ * microboot框架构建了默认的WebFilter，针对的是前后端分离的模式，因此抛异常时默认返回的也是Json格式的数据
+ * 但是也可以支持模板引擎（如：JSP，Freemarker，Thymeleaf等）的形式
+ * 定义SpringMVC的模板引擎，Controller返回ModelAndView对象并指定页面的路径即可
+ * 同时在web应用中自定义一个Filter类，在catch中捕捉异常，并且最后执行response.sendRedirect(errorUrl)即可
+ * 注意：自定义的Filter在构建时，一定要指定Order值大于1
+ * 不同情况的执行顺序如下：
+ * 1、请求 → WebFilter → 自定义Filter → Controller（Json数据）→ 自定义Filter → WebFilter
+ * 2、请求 → WebFilter → 自定义Filter → Controller（Json数据）→ 自定义Filter（报错，重定向到error页面）→║ WebFilter
+ * 3、请求 → WebFilter → 自定义Filter → Controller（ModelAndView）→║ 自定义Filter → WebFilter
+ * 4、请求 → WebFilter → 自定义Filter → Controller（ModelAndView）→║ 自定义Filter（报错，重定向到error页面）→║ WebFilter
+ * 5、请求 → WebFilter → Controller（Json返回值） → WebFilter
+ * 6、请求 → WebFilter → Controller（Json返回值） → WebFilter
+ * 一开始在写框架时，是连着后台管理系统一起写的，那时候没有用前后端分离的模式，WebFilter抛异常时默认是重定向到一个error页面
+ * 后来随着框架被其他项目使用，并使用了前后端分离的模式，才意识到不应该由服务端写死做页面重定向工作
  */
 public class WebFilter extends OncePerRequestFilter {
 
