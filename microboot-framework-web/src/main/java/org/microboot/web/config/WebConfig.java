@@ -3,6 +3,7 @@ package org.microboot.web.config;
 import org.apache.commons.lang3.StringUtils;
 import org.microboot.core.constant.Constant;
 import org.microboot.web.filter.WebFilter;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -41,6 +42,7 @@ public class WebConfig implements WebMvcConfigurer {
      * @return
      */
     @Bean(name = "org.springframework.boot.web.servlet.ServletRegistrationBean")
+    @ConditionalOnMissingBean(name = "org.springframework.boot.web.servlet.ServletRegistrationBean")
     public ServletRegistrationBean<DispatcherServlet> initServletRegistrationBean(Environment environment, DispatcherServlet dispatcherServlet) {
         String urlMappings = environment.getProperty("microboot.web.url-mappings", "/,*.html,*.do");
         String[] urlMappingArray = StringUtils.split(urlMappings, ",");
@@ -55,6 +57,7 @@ public class WebConfig implements WebMvcConfigurer {
      * @return
      */
     @Bean(name = "org.springframework.boot.web.servlet.FilterRegistrationBean<WebFilter>")
+    @ConditionalOnMissingBean(name = "org.springframework.boot.web.servlet.FilterRegistrationBean<WebFilter>")
     public FilterRegistrationBean<WebFilter> initFilterRegistrationBean() {
         FilterRegistrationBean<WebFilter> filterRegistrationBean = new FilterRegistrationBean<>();
         filterRegistrationBean.setFilter(new WebFilter());

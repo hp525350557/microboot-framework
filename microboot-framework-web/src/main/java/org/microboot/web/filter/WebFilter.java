@@ -19,10 +19,10 @@ import java.nio.charset.StandardCharsets;
  *
  * microboot框架构建了默认的WebFilter，针对的是前后端分离的模式，因此抛异常时默认返回的也是Json格式的数据
  * 但是也可以支持模板引擎（如：JSP，Freemarker，Thymeleaf等）的形式
- * 定义SpringMVC的模板引擎，Controller返回ModelAndView对象并指定页面的路径即可
- * 同时在web应用中自定义一个Filter类，在catch中捕捉异常，并且最后执行response.sendRedirect(errorUrl)即可
- * 注意：自定义的Filter在构建时，一定要指定Order值大于1
- * 不同情况的执行顺序如下：
+ * 方式一：自定义Filter覆盖WebFilter，bean的name指定为org.springframework.boot.web.servlet.FilterRegistrationBean<WebFilter>
+ * 方式二：自定义Filter加入过滤器链，如果希望抛出异常时重定向到error页，可以在catch中执行response.sendRedirect(errorUrl)
+ * 注意：自定义的Filter如果加入过滤器链，可以通过指定Order来设置过滤器的前后顺序
+ * 模拟几种执行顺序如下：
  * 1、请求 → WebFilter → 自定义Filter → Controller（Json数据）→ 自定义Filter → WebFilter
  * 2、请求 → WebFilter → 自定义Filter → Controller（Json数据）→ 自定义Filter（报错，重定向到error页面）→║ WebFilter
  * 3、请求 → WebFilter → 自定义Filter → Controller（ModelAndView）→║ 自定义Filter → WebFilter

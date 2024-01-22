@@ -381,8 +381,8 @@ public class CacheConfig {
      *
      * @return
      */
-    @ConditionalOnMissingBean(name = "keySerializer")
     @Bean(name = "keySerializer")
+    @ConditionalOnMissingBean(name = "keySerializer")
     public RedisSerializer initKeySerializer() {
         return new StringRedisSerializer();
     }
@@ -392,8 +392,8 @@ public class CacheConfig {
      *
      * @return
      */
-    @ConditionalOnMissingBean(name = "valueSerializer")
     @Bean(name = "valueSerializer")
+    @ConditionalOnMissingBean(name = "valueSerializer")
     public RedisSerializer initValueSerializer() {
         return new JdkSerializationRedisSerializer();
     }
@@ -403,8 +403,8 @@ public class CacheConfig {
      *
      * @return
      */
-    @ConditionalOnMissingBean(name = "hashKeySerializer")
     @Bean(name = "hashKeySerializer")
+    @ConditionalOnMissingBean(name = "hashKeySerializer")
     public RedisSerializer initHashKeySerializer() {
         return new StringRedisSerializer();
     }
@@ -414,8 +414,8 @@ public class CacheConfig {
      *
      * @return
      */
-    @ConditionalOnMissingBean(name = "hashValueSerializer")
     @Bean(name = "hashValueSerializer")
+    @ConditionalOnMissingBean(name = "hashValueSerializer")
     public RedisSerializer initHashValueSerializer() {
         return new JdkSerializationRedisSerializer();
     }
