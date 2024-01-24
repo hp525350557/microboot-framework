@@ -11,8 +11,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.microboot.cache.bean.ActiveMQListener;
 import org.microboot.cache.bean.ActiveMQProvider;
 import org.microboot.cache.constant.CacheConstant;
-import org.microboot.cache.func.MQListenerFunc;
-import org.microboot.cache.func.MQProviderFunc;
 import org.microboot.cache.impl.AbstractCache;
 import org.microboot.cache.impl.AbstractLocalCache;
 import org.microboot.cache.impl.CacheImpl;
@@ -59,11 +57,13 @@ public class CacheConfig {
     /**
      * ActiveMQTopic 初始化
      *
+     * 这里定义beanName = "activeMQTopic"，在ActiveMQListener的@JmsListener中有用到
+     *
      * @param environment
      * @return
      */
     @Bean(name = "activeMQTopic")
-    @ConditionalOnMissingBean(ActiveMQTopic.class)
+    @ConditionalOnMissingBean(name = "activeMQTopic")
     @ConditionalOnProperty(name = {"cache.activemq.using", "spring.jms.pub-sub-domain"}, havingValue = "true")
     public ActiveMQTopic initActiveMQTopic(JmsTemplate jmsTemplate, Environment environment) {
         ActiveMQTopic activeMQTopic = new ActiveMQTopic(StringUtils.isBlank(environment.getProperty("cache.activemq.topic"))
@@ -79,7 +79,7 @@ public class CacheConfig {
      * @return
      */
     @Bean(name = "org.microboot.cache.func.MQListenerFunc")
-    @ConditionalOnMissingBean(MQListenerFunc.class)
+    @ConditionalOnMissingBean(name = "org.microboot.cache.func.MQListenerFunc")
     @ConditionalOnProperty(name = {"cache.activemq.using", "spring.jms.pub-sub-domain"}, havingValue = "true")
     public ActiveMQListener initActiveMQListener() {
         return new ActiveMQListener();
@@ -88,10 +88,12 @@ public class CacheConfig {
     /**
      * ActiveMQProvider 初始化
      *
+     * 在CacheUtils中判断ActiveMQProvider是否存在，用的是ActiveMQProvider的全限定名
+     *
      * @return
      */
     @Bean(name = "org.microboot.cache.func.MQProviderFunc")
-    @ConditionalOnMissingBean(MQProviderFunc.class)
+    @ConditionalOnMissingBean(name = "org.microboot.cache.func.MQProviderFunc")
     @ConditionalOnProperty(name = {"cache.activemq.using", "spring.jms.pub-sub-domain"}, havingValue = "true")
     public ActiveMQProvider initActiveMQProvider() {
         return new ActiveMQProvider();

@@ -15,6 +15,7 @@ public class Constant {
     ////////////////////////////////统一key////////////////////////////////
     public static final String APPLICATION_CONTEXT_HOLDER = "org.microboot.core.bean.ApplicationContextHolder";
     public static final String CACHE_HOLDER = "org.microboot.core.bean.CacheHolder";
+    public static final String SYNC_FUNC_HOLDER = "org.microboot.core.func.SyncFunc";
 
     public static final String MASTER_DATA_SOURCE = "MASTER_DATA_SOURCE";
     public static final String MASTER_JDBC_TEMPLATE = "MASTER_JDBC_TEMPLATE";

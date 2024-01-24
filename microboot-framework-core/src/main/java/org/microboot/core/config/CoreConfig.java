@@ -3,8 +3,8 @@ package org.microboot.core.config;
 import org.microboot.core.bean.ApplicationContextHolder;
 import org.microboot.core.bean.CacheHolder;
 import org.microboot.core.bean.DefaultSyncFuncHolder;
-import org.microboot.core.func.SyncFunc;
 import org.microboot.core.constant.Constant;
+import org.microboot.core.func.SyncFunc;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -41,7 +41,7 @@ public class CoreConfig {
      * @return
      */
     @Bean(name = "org.microboot.core.func.SyncFunc")
-    @ConditionalOnMissingBean(SyncFunc.class)
+    @ConditionalOnMissingBean(name = Constant.SYNC_FUNC_HOLDER)
     public SyncFunc initSyncFunc() {
         return new DefaultSyncFuncHolder();
     }
