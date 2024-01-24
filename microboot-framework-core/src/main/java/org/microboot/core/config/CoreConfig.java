@@ -40,7 +40,7 @@ public class CoreConfig {
      *
      * @return
      */
-    @Bean(name = "org.microboot.core.func.SyncFunc")
+    @Bean(name = Constant.SYNC_FUNC_HOLDER)
     @ConditionalOnMissingBean(name = Constant.SYNC_FUNC_HOLDER)
     public SyncFunc initSyncFunc() {
         return new DefaultSyncFuncHolder();
