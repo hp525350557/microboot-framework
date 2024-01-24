@@ -21,7 +21,7 @@ public class XADataConfig {
      * @return
      */
     @Bean(name = "org.microboot.data.func.XADataSourceFactoryFunc")
-    @ConditionalOnMissingBean(XADataSourceFactoryFunc.class)
+    @ConditionalOnMissingBean(name = "org.microboot.data.func.XADataSourceFactoryFunc")
     public XADataSourceFactoryFunc initXADataSourceFactoryFunc() {
         return new XADataSourceFactoryBean();
     }
