@@ -12,8 +12,6 @@ import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.microboot.core.bean.ApplicationContextHolder;
 import org.microboot.core.constant.Constant;
-import org.microboot.core.utils.ConvertUtils;
-import org.microboot.core.utils.LoggerUtils;
 import org.microboot.validator.annotation.Validator;
 import org.microboot.validator.func.ValidatorFunc;
 import org.microboot.validator.resolver.ValidatorResolver;
@@ -55,22 +53,10 @@ public class ValidatorAspect {
         HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
         Method method = ((MethodSignature) joinPoint.getSignature()).getMethod();
         Validator validatorAnnotation = AnnotationUtils.findAnnotation(method, Validator.class);
+        //获取文件名
         String validatorName = validatorAnnotation.value();
-        String validatorContent = ApplicationContextHolder.getBean(ValidatorResolver.class).getValidator(validatorName);
-        if (StringUtils.isBlank(validatorContent)) {
-            throw new ValidatorException("Validator error : The file of " + validatorName + " is null");
-        }
-        Map<String, Object> validatorContentMap;
-        try {
-            validatorContentMap = ConvertUtils.json2Map(validatorContent);
-        } catch (Exception e) {
-            LoggerUtils.error(logger, e);
-            throw new ValidatorException("Validator error : The file of " + validatorName + " parsing error");
-        }
-        Map<String, Object> rulesMap = MapUtils.getMap(validatorContentMap, "rules");
-        if (MapUtils.isEmpty(rulesMap)) {
-            throw new ValidatorException("Validator error : The rules of " + validatorName + " is null");
-        }
+        //获取校验规则
+        Map<String, Object> rulesMap = ApplicationContextHolder.getBean(ValidatorResolver.class).getValidator(validatorName);
         for (String field : rulesMap.keySet()) {
             Map<String, Object> fieldMap = MapUtils.getMap(rulesMap, field);
             String defaultMessage = MapUtils.getString(fieldMap, "message");
